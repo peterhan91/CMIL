@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.cuda.amp import GradScaler, autocast  # For mixed-precision training
 from data_loader import get_data_loaders
-from model import FeatureExtractor, SliceFusionTransformer, EndToEndModel
+from models.cmil import FeatureExtractor, SliceFusionTransformer, EndToEndModel
 
 def train():
     # Configuration
