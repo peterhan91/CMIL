@@ -5,13 +5,13 @@ import torch.nn as nn
 class PatchEmbed(nn.Module):
     """Slide Patch Embedding"""
 
-    def __init__(self, in_chans=1536, embed_dim=768, norm_layer=None, bias=True):
+    def __init__(self, in_chans, embed_dim, norm_layer=None, bias=True):
         super().__init__()
         self.proj = nn.Linear(in_chans, embed_dim, bias=bias)
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
     def forward(self, x):
-        B, L, D = x.shape  # x shape: (batch_size, seq_length, embed_dim)
+        # x shape: (batch_size, seq_length, in_chans)
         x = self.proj(x)
         x = self.norm(x)
         return x
@@ -38,9 +38,9 @@ class PositionalEncoding(nn.Module):
 
 
 class FeatureExtractor(nn.Module):
-    def __init__(self, model_name='dinov2_vits14_reg'):
+    def __init__(self, model_name='dinov2_vits14'):
         super(FeatureExtractor, self).__init__()
-        # Load pre-trained DINOv2 model from timm
+        # Load pre-trained DINOv2 model from torch.hub
         self.model = torch.hub.load('facebookresearch/dinov2', model_name)
 
     def forward(self, x):
@@ -55,16 +55,17 @@ class FeatureExtractor(nn.Module):
 
 
 class SliceFusionTransformer(nn.Module):
-    def __init__(self, seq_len, in_chans, embed_dim, num_heads, hidden_dim, num_layers, patch_size=1):
+    def __init__(self, seq_len, embed_dim, num_heads, hidden_dim, num_layers, patch_size=1):
         super(SliceFusionTransformer, self).__init__()
         self.embed_dim = embed_dim
         self.seq_len = seq_len
         self.patch_size = patch_size
+        self.in_chans = patch_size * embed_dim  # Compute in_chans
 
         # Number of patches after dividing the sequence
         self.num_patches = (seq_len + patch_size - 1) // patch_size
-        self.patch_embed = PatchEmbed(in_chans=in_chans, embed_dim=embed_dim)
-        self.positional_encoding = PositionalEncoding(embed_dim, max_len=self.num_patches + 1)
+        self.patch_embed = PatchEmbed(in_chans=self.in_chans, embed_dim=embed_dim)
+        self.positional_encoding = PositionalEncoding(embed_dim, max_len=10000)
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
 
         # Transformer encoder layers with batch_first=True
@@ -87,7 +88,7 @@ class SliceFusionTransformer(nn.Module):
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
-            # we use xavier_uniform following official JAX ViT:
+            # We use xavier_uniform following official JAX ViT:
             torch.nn.init.xavier_uniform_(m.weight)
             if m.bias is not None:
                 nn.init.constant_(m.bias, 0)
@@ -108,20 +109,26 @@ class SliceFusionTransformer(nn.Module):
 
         # Update seq_length after padding
         seq_length = x.size(1)
-        self.num_patches = seq_length // self.patch_size
+        num_patches = seq_length // self.patch_size  # Use a local variable
 
         # Reshape x to (batch_size, num_patches, patch_size, embed_dim)
-        x = x.view(batch_size, self.num_patches, self.patch_size, self.embed_dim)
-        x = x.reshape(batch_size, self.num_patches, -1)  # Shape: (batch_size, num_patches, patch_size * embed_dim)
+        x = x.view(batch_size, num_patches, self.patch_size, self.embed_dim)
+        x = x.reshape(batch_size, num_patches, -1)  # Shape: (batch_size, num_patches, patch_size * embed_dim)
 
         # Apply patch embedding
         x = self.patch_embed(x)  # Shape: (batch_size, num_patches, embed_dim)
+
+        # Add CLS token
         cls_tokens = self.cls_token.expand(batch_size, -1, -1)  # Shape: (batch_size, 1, embed_dim)
         x = torch.cat((cls_tokens, x), dim=1)  # Shape: (batch_size, 1 + num_patches, embed_dim)
+
+        # Apply positional encoding
         x = self.positional_encoding(x)
 
         # Pass through the transformer encoder
         x = self.transformer_encoder(x)
+
+        # Extract the output corresponding to the CLS token
         cls_token_output = x[:, 0, :]  # Shape: (batch_size, embed_dim)
         return cls_token_output
 
