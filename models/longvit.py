@@ -1,5 +1,3 @@
-from functools import partial
-
 import torch
 import torch.nn as nn
 
@@ -40,8 +38,9 @@ class VisionTransformer(nn.Module):
                  embed_dim=768, depth=12, num_heads=12, mlp_ratio=4.,
                  qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0.,
                  drop_path_rate=0., norm_layer=nn.LayerNorm, flash_attention=True,
-                 dilated_ratio="[1,2,4,8,16]", segment_length="[256,512,1024,2048,4096]",
-                 checkpoint_activations=False, **kwargs):
+                 dilated_ratio="[1, 2, 4, 8, 16]", 
+                 segment_length="[768, 1536, 3072, 6144, 12288]",
+                 checkpoint_activations=False, **kwargs): 
         super().__init__()
         self.num_features = self.embed_dim = embed_dim
 
