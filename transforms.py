@@ -116,7 +116,7 @@ class RandomResizedCrop3D(nn.Module):
         area = depth * height * width
 
         log_ratio = torch.log(torch.tensor(ratio))
-        for _ in range(4):
+        for _ in range(10):
             target_volume = area * random.uniform(scale[0], scale[1])
             aspect = math.exp(random.uniform(log_ratio[0], log_ratio[1]))
 

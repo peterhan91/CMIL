@@ -25,8 +25,9 @@ import misc as misc
 from misc import NativeScalerWithGradNormCount as NativeScaler
 import models.longmae as models_mae
 from engine_pretrain import train_one_epoch
-from dataset import LMDB_Dataset, NIB_Dataset
-from transforms import RandomResizedCrop3D, RandomCrop3D, ZScoreNormalizationPerSample
+from dataset import LMDB_Dataset
+from transforms import RandomResizedCrop3D, ZScoreNormalizationPerSample
+from utils import *
 
 
 def get_args_parser():
@@ -113,7 +114,7 @@ def main(args):
     cudnn.benchmark = True
 
     transforms_train = transforms.Compose([
-        RandomResizedCrop3D(size=(256, 416, 416)),
+        RandomResizedCrop3D(size=(128, 224, 224)),
         ZScoreNormalizationPerSample()
     ])
         
@@ -134,14 +135,12 @@ def main(args):
 
     if global_rank == 0 and args.log_dir is not None:
         os.makedirs(args.log_dir, exist_ok=True)
-        log_writer = wandb.init(project='mae', 
-                                entity='meta', 
-                                config=vars(args))
+        log_writer = wandb.init(project='MAE', dir=args.log_dir, config=args)
 
     else:
         log_writer = None
 
-    data_loader_train = torch.utils.data.DataLoader(
+    data_loader_train = DataLoaderX(
         dataset_train, sampler=sampler_train,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
@@ -169,11 +168,11 @@ def main(args):
     print("effective batch size: %d" % eff_batch_size)
 
     if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=True)
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=False)
         model_without_ddp = model.module
     
     # following timm: set wd as 0 for bias and norm layers
-    param_groups = misc.add_weight_decay(model_without_ddp, args.weight_decay, bias_wd=True)
+    param_groups = misc.add_weight_decay(model_without_ddp, args.weight_decay, bias_wd=False)
     optimizer = torch.optim.AdamW(param_groups, lr=args.lr, betas=(0.9, 0.95))
     print(optimizer)
     loss_scaler = NativeScaler()
