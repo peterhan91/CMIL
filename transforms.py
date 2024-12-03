@@ -102,7 +102,7 @@ class RandomResizedCrop3D(nn.Module):
 
     @staticmethod
     def get_params(img, scale, ratio):
-        """Get parameters for a random sized crop.
+        """Get parameters for a random sized crop without using a for-loop.
 
         Args:
             img (Tensor): Input 3D image tensor.
@@ -116,22 +116,35 @@ class RandomResizedCrop3D(nn.Module):
         area = depth * height * width
 
         log_ratio = torch.log(torch.tensor(ratio))
-        for _ in range(10):
-            target_volume = area * random.uniform(scale[0], scale[1])
-            aspect = math.exp(random.uniform(log_ratio[0], log_ratio[1]))
 
-            # Compute dimensions of the crop
-            d = int(round((target_volume * aspect) ** (1/3)))
-            h = int(round((target_volume / aspect) ** (1/3)))
-            w = int(round((target_volume / aspect) ** (1/3)))
+        # Generate N candidate crops in parallel
+        N = 10  # Number of candidates
+        target_volumes = area * torch.empty(N).uniform_(scale[0], scale[1])
+        aspects = torch.exp(torch.empty(N).uniform_(log_ratio[0], log_ratio[1]))
 
-            if d <= depth and h <= height and w <= width:
-                i = random.randint(0, depth - d)
-                j = random.randint(0, height - h)
-                k = random.randint(0, width - w)
-                return i, j, k, d, h, w
+        # Compute dimensions of the crop
+        ds = torch.round((target_volumes * aspects) ** (1/3)).int()
+        hs = torch.round((target_volumes / aspects) ** (1/3)).int()
+        ws = torch.round((target_volumes / aspects) ** (1/3)).int()
 
-        # Fallback to center crop
+        # Filter out invalid dimensions
+        valid = (ds <= depth) & (hs <= height) & (ws <= width)
+        valid_indices = valid.nonzero(as_tuple=False).view(-1)
+
+        if valid_indices.numel() > 0:
+            # Randomly select one of the valid candidates
+            idx = valid_indices[torch.randint(len(valid_indices), (1,)).item()]
+            d = ds[idx].item()
+            h = hs[idx].item()
+            w = ws[idx].item()
+
+            # Randomly select the crop position
+            i = torch.randint(0, depth - d + 1, (1,)).item()
+            j = torch.randint(0, height - h + 1, (1,)).item()
+            k = torch.randint(0, width - w + 1, (1,)).item()
+            return i, j, k, d, h, w
+
+        # Fallback to center crop if no valid candidates
         d = min(depth, int(round(depth * scale[1])))
         h = min(height, int(round(height * scale[1])))
         w = min(width, int(round(width * scale[1])))
@@ -139,6 +152,7 @@ class RandomResizedCrop3D(nn.Module):
         j = (height - h) // 2
         k = (width - w) // 2
         return i, j, k, d, h, w
+
 
     def forward(self, img):
         """

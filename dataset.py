@@ -29,7 +29,7 @@ class NIB_Dataset(Dataset):
         img_data = float(row["RescaleSlope"]) * img_data + float(row["RescaleIntercept"])
         hu_min, hu_max = -1000, 1000
         img_data = np.clip(img_data, hu_min, hu_max)
-        img_data = ((img_data + 1000) / 2000).astype(np.float16)  # Normalize to [0, 1]
+        img_data = ((img_data + 1000) / 2000).astype(np.float32)  # Normalize to [0, 1]
         img_data = img_data.transpose(2, 1, 0)
         
         tensor = torch.from_numpy(img_data)

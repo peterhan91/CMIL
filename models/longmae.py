@@ -306,7 +306,7 @@ def mae_vit_small_patch16_dec512d8b(**kwargs):
     model = MaskedAutoencoderViT3D(
         img_size=(128, 224, 224), patch_size=(4, 16, 16), embed_dim=384, 
         depth=12, num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        decoder_embed_dim=384, decoder_depth=8, decoder_num_heads=16, 
+        decoder_embed_dim=384, decoder_depth=4, decoder_num_heads=16, 
         segment_length="[392, 784, 1568, 3136, 6272]",
         **kwargs)
     return model

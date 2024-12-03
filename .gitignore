@@ -5,6 +5,7 @@ runs/
 tutorial/
 *.py[cod]
 *$py.class
+*webdataset*
 
 # C extensions
 *.so
