@@ -9,6 +9,7 @@ import wandb
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.callbacks import LearningRateMonitor
 
 import models.longmae as models_mae
 from dataset import LMDB_Dataset
@@ -72,31 +73,12 @@ def get_args_parser():
     parser.add_argument('--no_pin_mem', action='store_false', dest='pin_mem')
     parser.set_defaults(pin_mem=True)
 
-    # distributed training parameters
-    parser.add_argument('--world_size', default=1, type=int,
-                        help='number of distributed processes')
-    parser.add_argument('--local_rank', default=-1, type=int)
-    parser.add_argument('--dist_url', default='env://',
-                        help='url used to set up distributed training')
-
     # Additional parameters
     parser.add_argument('--use_amp', action='store_true', help='Use automatic mixed precision')
     parser.add_argument('--print_freq', default=20, type=int, help='Print frequency during training')
 
     return parser
 
-# Utility functions (adjusted from the scripts you provided)
-def adjust_learning_rate(optimizer, epoch, args, batch_idx, num_training_steps_per_epoch):
-    """Decay the learning rate with half-cycle cosine after warmup"""
-    progress = epoch + batch_idx / num_training_steps_per_epoch
-    if progress < args.warmup_epochs:
-        lr = args.lr * progress / args.warmup_epochs
-    else:
-        lr = args.min_lr + (args.lr - args.min_lr) * 0.5 * \
-            (1. + math.cos(math.pi * (progress - args.warmup_epochs) / (args.epochs - args.warmup_epochs)))
-    for param_group in optimizer.param_groups:
-        param_group["lr"] = lr * param_group.get("lr_scale", 1.0)
-    return lr
 
 def add_weight_decay(model, weight_decay=1e-5, skip_list=(), bias_wd=False):
     decay = []
@@ -113,6 +95,7 @@ def add_weight_decay(model, weight_decay=1e-5, skip_list=(), bias_wd=False):
         {"params": decay, "weight_decay": weight_decay},
     ]
 
+
 class MAELightningModule(pl.LightningModule):
     def __init__(self, args):
         super().__init__()
@@ -123,29 +106,17 @@ class MAELightningModule(pl.LightningModule):
         # Define the model
         self.model = models_mae.__dict__[self.hparams.model](norm_pix_loss=self.hparams.norm_pix_loss)
 
-        # For tracking learning rate
-        self.current_lr = self.hparams.lr
-
     def forward(self, x):
         return self.model(x, mask_ratio=self.hparams.mask_ratio)
 
     def training_step(self, batch, batch_idx):
         samples, _ = batch  # Unpack the batch
-        samples = samples.to(self.device, non_blocking=True)
-
-        optimizer = self.optimizers()
-        num_training_steps_per_epoch = len(self.trainer.datamodule.train_dataloader())
-
-        # Adjust learning rate per iteration
-        lr = adjust_learning_rate(optimizer, self.current_epoch, self.args, batch_idx, num_training_steps_per_epoch)
-        self.current_lr = lr  # For logging
 
         # Forward pass
         loss, _, _ = self(samples)
 
         # Log loss
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log('lr', lr, on_step=True, on_epoch=False, prog_bar=True, logger=True)
 
         return loss
 
@@ -154,15 +125,22 @@ class MAELightningModule(pl.LightningModule):
         param_groups = add_weight_decay(self.model, self.hparams.weight_decay, bias_wd=False)
         optimizer = torch.optim.AdamW(param_groups, lr=self.hparams.lr, betas=(0.9, 0.95))
 
-        return optimizer
+        # Calculate total training steps
+        total_steps = self.trainer.estimated_stepping_batches
 
-    def on_train_epoch_start(self):
-        # Reset learning rate at the start of each epoch
-        optimizer = self.optimizers()
-        adjust_learning_rate(optimizer, self.current_epoch, self.args, batch_idx=0, num_training_steps_per_epoch=1)
+        # Define the learning rate scheduler
+        def lr_lambda(current_step):
+            if current_step < self.hparams.warmup_epochs * total_steps / self.hparams.epochs:
+                return float(current_step) / (self.hparams.warmup_epochs * total_steps / self.hparams.epochs)
+            else:
+                progress = (current_step - self.hparams.warmup_epochs * total_steps / self.hparams.epochs) / (
+                    total_steps - self.hparams.warmup_epochs * total_steps / self.hparams.epochs)
+                return 0.5 * (1. + math.cos(math.pi * progress))
 
-    def optimizer_zero_grad(self, epoch, batch_idx, optimizer, optimizer_idx):
-        optimizer.zero_grad(set_to_none=True)  # Better performance
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
+
+        return [optimizer], [scheduler]
+
 
 class MAEDataModule(pl.LightningDataModule):
     def __init__(self, args):
@@ -197,6 +175,7 @@ class MAEDataModule(pl.LightningDataModule):
                                            shuffle=(sampler is None),
                                            pin_memory=self.args.pin_mem,
                                            drop_last=True)
+
 
 def main(args):
     # Set the seed for reproducibility
@@ -239,6 +218,8 @@ def main(args):
         every_n_epochs=20,  # Save every 20 epochs
     )
 
+    lr_monitor = LearningRateMonitor(logging_interval='step')
+
     # Define the trainer
     trainer = pl.Trainer(
         max_epochs=args.epochs,
@@ -246,7 +227,7 @@ def main(args):
         accelerator=accelerator,
         strategy='ddp' if devices > 1 else None,
         logger=wandb_logger,
-        callbacks=[checkpoint_callback],
+        callbacks=[checkpoint_callback, lr_monitor],
         precision=16 if args.use_amp else 32,
         accumulate_grad_batches=args.accum_iter,
         log_every_n_steps=args.print_freq,
@@ -264,6 +245,7 @@ def main(args):
 
     # Finish wandb run
     wandb.finish()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('MAE pre-training script', parents=[get_args_parser()])

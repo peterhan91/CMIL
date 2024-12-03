@@ -11,7 +11,7 @@ CSV_PATH="csvs/ct_rate_train_512.csv"  # Path to the CSV file containing the dat
 LMDB_PATH="/home/than/Datasets/CT/ct_rate_train_512.lmdb"  # Directory containing your dataset
 
 # Run the main training script
-torchrun --nproc_per_node=1 pretrain_mae_pl.py \
+python pretrain_mae_pl.py \
     --batch_size 32 \
     --epochs 400 \
     --accum_iter 64 \
