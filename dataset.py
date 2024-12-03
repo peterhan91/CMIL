@@ -56,36 +56,39 @@ class NIB_Dataset(Dataset):
 
 class LMDB_Dataset(Dataset):
     def __init__(self, csv_path, lmdb_path, image_key='VolumeName',
-                 transforms=None, sub_sample=False):
+                 transforms=None, target_shape=None, sub_sample=False):
         logging.debug(f'Loading image data from {lmdb_path}.')
         self.lmdb_path = lmdb_path
         self.df = pd.read_csv(csv_path)
         self.transforms = transforms
         self.image_key = image_key
+        self.target_shape = target_shape
         if sub_sample:
             self.df = self.df.sample(n=10, random_state=42).reset_index(drop=True)
-        self.env = None
+        self.env = lmdb.open(
+                            lmdb_path,
+                            max_readers=32,
+                            readonly=True,
+                            lock=False,
+                            readahead=False,
+                            meminit=False,
+                        )
+
+        if not self.env:
+            raise IOError('Cannot open lmdb dataset', lmdb_path)
 
     def __len__(self):
         return len(self.df)
 
     def __getitem__(self, idx):
-        if self.env is None:
-            self.env = lmdb.open(
-                self.lmdb_path, readonly=True, lock=False, readahead=True, meminit=False
-            )
-
         row = self.df.iloc[idx]
         key = row[self.image_key]
-        with self.env.begin(write=False, buffers=True) as txn:
+        with self.env.begin(write=False) as txn:
             value = txn.get(key.encode('ascii'))
             shape_value = txn.get(f"{key}_shape".encode('ascii'))
-            img_shape = np.frombuffer(shape_value, dtype=np.int32)
+            img_shape = self.target_shape if self.target_shape else np.frombuffer(shape_value, dtype=np.int32)
             data = np.frombuffer(value, dtype=np.uint8).reshape(img_shape).copy()
             data = torch.from_numpy(data).unsqueeze(0).float().div(255)
-
-        if self.transforms:
-            data = self.transforms(data)
         
         label = []
         columes = ['Medical material', 'Arterial wall calcification', 'Cardiomegaly',
@@ -97,22 +100,11 @@ class LMDB_Dataset(Dataset):
         
         label = row[columes].values.astype(np.int32)
         
+        if self.transforms:
+            data = self.transforms(data)
+        
         return data, label
-    
-    def __getstate__(self):
-        # Exclude the LMDB environment from being pickled
-        state = self.__dict__.copy()
-        state['env'] = None
-        return state
 
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self.env = None
-
-    def __del__(self):
-        # Close the LMDB environment when the dataset is destroyed
-        if self.env is not None:
-            self.env.close()
 
 if __name__ == '__main__':
     csv_path = '/home/than/DeepLearning/CMIL/csvs/ct_rate_train_512.csv'

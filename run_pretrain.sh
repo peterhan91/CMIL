@@ -6,26 +6,31 @@
 
 # Set job directory, data path, and pretrained model path
 # Replace these paths with your actual directories
-JOB_DIR="runs/"
+OUTPUT_DIR="runs/"
 CSV_PATH="csvs/ct_rate_train_512.csv"  # Path to the CSV file containing the dataset information
-DATA_DIR="/home/than/Datasets/CT/ct_rate_train_512.lmdb"  # Directory containing your dataset
+LMDB_PATH="/home/than/Datasets/CT/ct_rate_train_512.lmdb"  # Directory containing your dataset
 
 # Run the main training script
-torchrun --nproc_per_node=3 pretrain_mae.py \
-    --batch_size 22 \
-    --epochs 800 \
+torchrun --nproc_per_node=1 pretrain_mae_pl.py \
+    --batch_size 32 \
+    --epochs 400 \
+    --accum_iter 64 \
     --model mae_vit_small_patch16 \
     --mask_ratio 0.9 \
     --norm_pix_loss \
     --weight_decay 0.05 \
     --blr 1.6e-3 \
-    --accum_iter 62 \
     --warmup_epochs 40 \
-    --output_dir ${JOB_DIR} \
-    --log_dir ${JOB_DIR} \
-    --num_workers 8 \
-    --csv_path ${CSV_PATH} \
-    --lmdb_path ${DATA_DIR} \
+    --csv_path $CSV_PATH \
+    --lmdb_path $LMDB_PATH \
+    --output_dir $OUTPUT_DIR \
+    --log_dir $OUTPUT_DIR \
+    --device cuda \
+    --seed 0 \
+    --num_workers 10 \
+    --pin_mem \
+    --use_amp \
+    --print_freq 20
 
 
 # ========================================
