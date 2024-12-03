@@ -123,12 +123,6 @@ class MAELightningModule(pl.LightningModule):
         # Define the model
         self.model = models_mae.__dict__[self.hparams.model](norm_pix_loss=self.hparams.norm_pix_loss)
 
-        # Initialize loss scaler for mixed precision
-        if self.hparams.use_amp:
-            self.loss_scaler = torch.cuda.amp.GradScaler()
-        else:
-            self.loss_scaler = None
-
         # For tracking learning rate
         self.current_lr = self.hparams.lr
 
@@ -147,8 +141,7 @@ class MAELightningModule(pl.LightningModule):
         self.current_lr = lr  # For logging
 
         # Forward pass
-        with torch.cuda.amp.autocast(enabled=self.hparams.use_amp):
-            loss, _, _ = self(samples)
+        loss, _, _ = self(samples)
 
         # Log loss
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
