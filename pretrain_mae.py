@@ -15,9 +15,11 @@ import numpy as np
 import os
 import time
 from pathlib import Path
+from multiprocessing import get_context
 
 import torch
 import torch.backends.cudnn as cudnn
+from torch.utils.data import DataLoader
 import wandb
 import torchvision.transforms as transforms
 
@@ -25,7 +27,7 @@ import misc as misc
 from misc import NativeScalerWithGradNormCount as NativeScaler
 import models.longmae as models_mae
 from engine_pretrain import train_one_epoch
-from dataset import LMDB_Dataset
+from dataset import Simple_Dataset
 from transforms import RandomResizedCrop3D, ZScoreNormalizationPerSample
 from utils import *
 
@@ -119,7 +121,10 @@ def main(args):
     ])
         
     # Create the dataset using LMDB_Dataset
-    dataset_train = LMDB_Dataset(csv_path=args.csv_path, lmdb_path=args.lmdb_path, transforms=transforms_train,
+    dataset_train = Simple_Dataset(csv_path=args.csv_path, 
+                                 img_folder=args.lmdb_path,
+                                 file_ext='npz',
+                                 transforms=transforms_train,
     )
     print(f"Dataset loaded with {len(dataset_train)} samples.")
 
@@ -131,23 +136,25 @@ def main(args):
         )
         print("Sampler_train = %s" % str(sampler_train))
     else:
-        sampler_train = torch.utils.data.RandomSampler(dataset_train)
+        sampler_train = None
 
     if global_rank == 0 and args.log_dir is not None:
         os.makedirs(args.log_dir, exist_ok=True)
-        log_writer = wandb.init(project='MAE', dir=args.log_dir, config=args)
-
+        # log_writer = wandb.init(project='MAE', dir=args.log_dir, config=args)
+        log_writer = None
     else:
         log_writer = None
 
-    data_loader_train = DataLoaderX(
-        dataset_train, sampler=sampler_train,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
-        pin_memory=True,
-        drop_last=True,
-        persistent_workers=True,
-    )
+    data_loader_train = DataLoader(dataset_train, 
+                                    sampler=sampler_train,
+                                    shuffle=True if sampler_train is None else False,
+                                    batch_size=args.batch_size,
+                                    num_workers=args.num_workers,
+                                    pin_memory=True,
+                                    drop_last=True,
+                                    persistent_workers=True,
+                                    multiprocessing_context=get_context('fork'),
+                                )
     
     # define the model
     model = models_mae.__dict__[args.model](norm_pix_loss=args.norm_pix_loss)

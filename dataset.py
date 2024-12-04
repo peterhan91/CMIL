@@ -6,7 +6,60 @@ import SimpleITK as sitk
 import lmdb
 import torch
 import torch.nn.functional as F
+from pathlib import Path
 from torch.utils.data import Dataset, DataLoader
+
+class Simple_Dataset(Dataset):
+    def __init__(self, csv_path, img_folder, file_ext='npz', transforms=None, sub_sample=False):
+        img_folder = Path(img_folder)
+        files = list(img_folder.glob(f'*.{file_ext}'))
+        # Build a mapping from VolumeName (with 'nii.gz' extension) to the actual file path
+        self.file_dict = {
+            f.name.replace(f'.{file_ext}', '.nii.gz'): f for f in files
+        }
+
+        self.df = pd.read_csv(csv_path)
+        self.df = self.df[self.df['VolumeName'].isin(self.file_dict.keys())].reset_index(drop=True)
+        self.transforms = transforms
+        self.img_folder = img_folder
+        self.file_ext = file_ext
+        
+        if sub_sample:
+            self.df = self.df.sample(n=10, random_state=42).reset_index(drop=True)
+        
+        self.columes = [
+            'Medical material', 'Arterial wall calcification', 'Cardiomegaly',
+            'Pericardial effusion', 'Coronary artery wall calcification',
+            'Hiatal hernia', 'Lymphadenopathy', 'Emphysema', 'Atelectasis',
+            'Lung nodule', 'Lung opacity', 'Pulmonary fibrotic sequela',
+            'Pleural effusion', 'Mosaic attenuation pattern', 'Peribronchial thickening',
+            'Consolidation', 'Bronchiectasis', 'Interlobular septal thickening',
+        ]
+        
+    def __len__(self):
+        return len(self.df)
+    
+    def __getitem__(self, idx): 
+        row = self.df.iloc[idx]
+        img_name = row['VolumeName']
+        img_path = self.file_dict[img_name]
+
+        if self.file_ext == 'npz':
+            with np.load(img_path, mmap_mode=None) as f:
+                img_data = f['img_data']
+        elif self.file_ext == 'nii':
+            img_data = nib.load(str(img_path)).get_fdata()
+        else:
+            raise NotImplementedError(f'File extension {self.file_ext} is not supported.')
+        
+        img_data = torch.from_numpy(img_data.astype(np.float32)).unsqueeze(0)
+        if self.transforms:
+            img_data = self.transforms(img_data)
+        
+        label = row[self.columes].values.astype(np.int32)
+        
+        return img_data, label
+
 
 
 class NIB_Dataset(Dataset):

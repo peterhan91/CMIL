@@ -9,7 +9,7 @@ from timm.models.layers import trunc_normal_ as __call_trunc_normal_
 
 def get_vit_config(
         img_size=1024, patch_size=32, drop_path_rate=0,
-        checkpoint_activations=None, mlp_ratio=4, vocab_size=64010, **kwargs
+        checkpoint_activations=None, mlp_ratio=4, vocab_size=-1, **kwargs
 ):
     return EncoderConfig(
         img_size=img_size, patch_size=patch_size, vocab_size=vocab_size, multiway=False,

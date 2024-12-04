@@ -83,7 +83,7 @@ class MaskedAutoencoderViT3D(nn.Module):
 
         # Encoder configuration using EncoderConfig
         encoder_config = EncoderConfig(
-            img_size=img_size, patch_size=patch_size, vocab_size=64010,
+            img_size=img_size, patch_size=patch_size, vocab_size=-1,
             multiway=False, layernorm_embedding=False, normalize_output=False,
             no_output_layer=True, drop_path_rate=drop_path_rate,
             encoder_embed_dim=embed_dim, encoder_attention_heads=num_heads,
@@ -106,7 +106,7 @@ class MaskedAutoencoderViT3D(nn.Module):
         # Decoder configuration using DecoderConfig
         decoder_config = EncoderConfig(
             img_size=img_size, patch_size=patch_size,
-            vocab_size=64010, multiway=False, layernorm_embedding=False,
+            vocab_size=-1, multiway=False, layernorm_embedding=False,
             normalize_output=False, no_output_layer=True, drop_path_rate=drop_path_rate,
             encoder_embed_dim=decoder_embed_dim, encoder_attention_heads=decoder_num_heads,
             encoder_ffn_embed_dim=int(decoder_embed_dim * mlp_ratio), encoder_layers=decoder_depth,
