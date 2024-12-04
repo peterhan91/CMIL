@@ -2,7 +2,6 @@
 __pycache__/
 csvs/
 runs/
-tutorial/
 *.py[cod]
 *$py.class
 *webdataset*
