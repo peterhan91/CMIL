@@ -58,7 +58,7 @@ class VisionTransformer(nn.Module):
         self.pos_drop = nn.Dropout(p=drop_rate)
 
         encoder_config = EncoderConfig(
-            img_size=img_size, patch_size=patch_size, vocab_size=64010,
+            img_size=img_size, patch_size=patch_size, vocab_size=-1,
             multiway=False, layernorm_embedding=False, normalize_output=False,
             no_output_layer=True, drop_path_rate=drop_path_rate,
             encoder_embed_dim=embed_dim, encoder_attention_heads=num_heads,

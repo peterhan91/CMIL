@@ -6,13 +6,14 @@ from pathlib import Path
 import torch
 import torchvision.transforms as transforms
 import wandb
+from torch.multiprocessing import get_context
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import LearningRateMonitor
 
 import models.longmae as models_mae
-from dataset import LMDB_Dataset
+from dataset import simple_Dataset
 from transforms import RandomResizedCrop3D, ZScoreNormalizationPerSample
 
 
@@ -100,8 +101,7 @@ class MAELightningModule(pl.LightningModule):
     def __init__(self, args):
         super().__init__()
         # Save hyperparameters
-        self.save_hyperparameters()
-        self.args = args
+        self.save_hyperparameters(args)
 
         # Define the model
         self.model = models_mae.__dict__[self.hparams.model](norm_pix_loss=self.hparams.norm_pix_loss)
@@ -157,9 +157,11 @@ class MAEDataModule(pl.LightningDataModule):
 
     def setup(self, stage=None):
         # Create dataset
-        self.dataset_train = LMDB_Dataset(csv_path=self.args.csv_path,
-                                          lmdb_path=self.args.lmdb_path,
-                                          transforms=self.transforms_train)
+        self.dataset_train = simple_Dataset(csv_path=self.args.csv_path,
+                                            image_folder=self.args.lmdb_path,
+                                            filetype='nii.gz',
+                                            transforms=self.transforms_train)
+        print(f"Dataset loaded with {len(self.dataset_train)} samples.")
 
     def train_dataloader(self):
         # Use DistributedSampler if multiple GPUs are used
@@ -173,8 +175,10 @@ class MAEDataModule(pl.LightningDataModule):
                                            sampler=sampler,
                                            num_workers=self.num_workers,
                                            shuffle=(sampler is None),
-                                           pin_memory=self.args.pin_mem,
-                                           drop_last=True)
+                                           pin_memory=True,
+                                           drop_last=True,
+                                           persistent_workers=True,
+                                           multiprocessing_context=get_context('fork'),)
 
 
 def main(args):
@@ -225,7 +229,7 @@ def main(args):
         max_epochs=args.epochs,
         devices=devices,
         accelerator=accelerator,
-        strategy='ddp' if devices > 1 else None,
+        strategy='ddp' if devices > 1 else "auto",
         logger=wandb_logger,
         callbacks=[checkpoint_callback, lr_monitor],
         precision=16 if args.use_amp else 32,
