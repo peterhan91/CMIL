@@ -32,7 +32,7 @@ from util.pos_embed import interpolate_pos_embed
 from util.datasets import build_dataset
 from models import models_vit
 
-from engine_finetune import train_one_epoch, evaluate, evaluate_bce
+from engine_finetune import train_one_epoch, evaluate_bce
 
 
 def get_args_parser():
@@ -325,7 +325,6 @@ def main(args):
                 loss_scaler=loss_scaler, epoch=epoch)
 
         test_stats = evaluate_bce(data_loader_val, model, device)
-        # print(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
         print(f"ROC-AUC of the network on the {len(dataset_val)} test images: {test_stats['roc_auc']:.1f}%")
         max_auc = max(max_auc, test_stats["roc_auc"])
         print(f'Max accuracy: {max_auc:.2f}%')

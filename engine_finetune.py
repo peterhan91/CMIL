@@ -54,7 +54,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         if mixup_fn is not None:
             samples, targets = mixup_fn(samples, targets)
 
-        with torch.cuda.amp.autocast():
+        with torch.amp.autocast('cuda'):
             outputs = model(samples)
             
             loss = criterion(outputs, targets)
@@ -133,11 +133,10 @@ def evaluate(data_loader, model, device):
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 
-
-
 @torch.no_grad()
 def evaluate_bce(data_loader, model, device):
     criterion = nn.BCEWithLogitsLoss()
+    
     metric_logger = misc.MetricLogger(delimiter="  ")
     header = 'Test:'
 
