@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import logging
 import nibabel as nib
-import SimpleITK as sitk
+# import SimpleITK as sitk
 import lmdb
 import torch
 import torch.nn.functional as F

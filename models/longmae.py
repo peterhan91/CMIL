@@ -302,21 +302,21 @@ class MaskedAutoencoderViT3D(nn.Module):
         return loss, pred, mask
 
 
-def mae_vit_small_patch16_dec512d8b(**kwargs):
+def mae_vit_base_patch16_dec480d8b(**kwargs):
     model = MaskedAutoencoderViT3D(
-        img_size=(128, 224, 224), patch_size=(4, 16, 16), embed_dim=384, 
+        img_size=(128, 224, 224), patch_size=(4, 16, 16), embed_dim=768, 
         depth=12, num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        decoder_embed_dim=384, decoder_depth=4, decoder_num_heads=16, 
+        decoder_embed_dim=480, decoder_depth=8, decoder_num_heads=16, 
         segment_length="[392, 784, 1568, 3136, 6272]",
         **kwargs)
     return model
 
 
-mae_vit_small_patch16 = mae_vit_small_patch16_dec512d8b
+mae_vit_base_patch16 = mae_vit_base_patch16_dec480d8b
 
 
 if __name__ == '__main__':
-    model = mae_vit_small_patch16().half().to('cuda:1')
+    model = mae_vit_base_patch16().half().to('cuda:1')
     imgs = torch.randn(32, 1, 256, 416, 416).half().to('cuda:1')
     loss, pred, mask = model(imgs)
     print(loss)

@@ -20,6 +20,7 @@ from multiprocessing import get_context
 import torch
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
+from prefetch_generator import BackgroundGenerator
 import wandb
 import torchvision.transforms as transforms
 
@@ -30,6 +31,11 @@ from engine_pretrain import train_one_epoch
 from dataset import Simple_Dataset
 from transforms import RandomResizedCrop3D, ZScoreNormalizationPerSample
 from utils import *
+
+
+class DataLoaderX(DataLoader):
+    def __iter__(self):
+        return BackgroundGenerator(super().__iter__())
 
 
 def get_args_parser():
@@ -140,12 +146,11 @@ def main(args):
 
     if global_rank == 0 and args.log_dir is not None:
         os.makedirs(args.log_dir, exist_ok=True)
-        # log_writer = wandb.init(project='MAE', dir=args.log_dir, config=args)
-        log_writer = None
+        log_writer = wandb.init(project='MAE', dir=args.log_dir, config=args)
     else:
         log_writer = None
 
-    data_loader_train = DataLoader(dataset_train, 
+    data_loader_train = DataLoaderX(dataset_train, 
                                     sampler=sampler_train,
                                     shuffle=True if sampler_train is None else False,
                                     batch_size=args.batch_size,

@@ -5,6 +5,7 @@ runs/
 *.py[cod]
 *$py.class
 *webdataset*
+*.txt
 
 # C extensions
 *.so
