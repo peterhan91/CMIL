@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
+from glob import glob
 from multiprocessing import Pool
 from functools import partial
 
@@ -72,11 +73,13 @@ def process_image(row_dict, save_path, new_shape=(384, 512, 512)):
 def convert_to_nii(annotations_csv, save_path, new_shape=(384, 512, 512)):
     # Load annotations CSV
     df = pd.read_csv(annotations_csv)
+    processed = [os.path.basename(x).replace('npz', 'nii.gz') for x in list(glob(os.path.join(save_path, '*.npz')))]
+    df = df[~df['VolumeName'].isin(processed)]
 
     # Prepare arguments
     rows = [row.to_dict() for _, row in df.iterrows()]
 
-    with Pool(4) as pool:
+    with Pool(8) as pool:
         process_image_partial = partial(process_image, save_path=save_path, new_shape=new_shape)
         for _ in tqdm(pool.imap_unordered(process_image_partial, rows), total=len(rows)):
             pass
