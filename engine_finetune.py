@@ -12,8 +12,10 @@
 import math
 import sys
 from typing import Iterable, Optional
+from sklearn.metrics import roc_auc_score
 
 import torch
+import torch.nn as nn
 
 from timm.data import Mixup
 from timm.utils import accuracy
@@ -54,6 +56,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
         with torch.cuda.amp.autocast():
             outputs = model(samples)
+            
             loss = criterion(outputs, targets)
 
         loss_value = loss.item()
@@ -126,5 +129,62 @@ def evaluate(data_loader, model, device):
     metric_logger.synchronize_between_processes()
     print('* Acc@1 {top1.global_avg:.3f} Acc@5 {top5.global_avg:.3f} loss {losses.global_avg:.3f}'
           .format(top1=metric_logger.acc1, top5=metric_logger.acc5, losses=metric_logger.loss))
+
+    return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+
+
+
+
+@torch.no_grad()
+def evaluate_bce(data_loader, model, device):
+    criterion = nn.BCEWithLogitsLoss()
+    metric_logger = misc.MetricLogger(delimiter="  ")
+    header = 'Test:'
+
+    # switch to evaluation mode
+    model.eval()
+
+    # We'll gather predictions and targets for the entire dataset
+    all_preds = []
+    all_targets = []
+
+    for batch in metric_logger.log_every(data_loader, 10, header):
+        images = batch[0]
+        targets = batch[-1]  # Assumes the last element is the label/target
+
+        images = images.to(device, non_blocking=True)
+        targets = targets.to(device, non_blocking=True)
+
+        # compute output
+        with torch.cuda.amp.autocast():
+            outputs = model(images)
+            # Convert targets to float for BCE
+            loss = criterion(outputs, targets.float())
+
+        # Save predictions and targets for computing ROC-AUC after the loop
+        all_preds.append(outputs.detach().cpu())
+        all_targets.append(targets.detach().cpu())
+
+        # Log the loss
+        metric_logger.update(loss=loss.item())
+
+    # Concatenate all predictions and targets
+    all_preds = torch.cat(all_preds, dim=0).numpy()
+    all_targets = torch.cat(all_targets, dim=0).numpy()
+
+    # Compute ROC-AUC (sklearn expects arrays of shape [N] for binary case)
+    roc_auc = roc_auc_score(all_targets, all_preds)
+    # Update the metric logger for ROC-AUC
+    metric_logger.meters['roc_auc'].update(roc_auc, n=len(all_preds))
+    # Gather the stats from all processes (if using distributed training)
+    metric_logger.synchronize_between_processes()
+
+    # Print final stats
+    print('* ROC-AUC {roc_auc.global_avg:.3f}  '
+          'loss {losses.global_avg:.3f}'
+          .format(
+              roc_auc=metric_logger.roc_auc,
+              losses=metric_logger.loss
+          ))
 
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
