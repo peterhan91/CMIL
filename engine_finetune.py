@@ -115,7 +115,7 @@ def evaluate(data_loader, model, device):
         target = target.to(device, non_blocking=True)
 
         # compute output
-        with torch.cuda.amp.autocast():
+        with torch.amp.autocast('cuda'):
             output = model(images)
             loss = criterion(output, target)
 
@@ -155,7 +155,7 @@ def evaluate_bce(data_loader, model, device):
         targets = targets.to(device, non_blocking=True)
 
         # compute output
-        with torch.cuda.amp.autocast():
+        with torch.amp.autocast('cuda'):
             outputs = model(images)
             # Convert targets to float for BCE
             loss = criterion(outputs, targets.float())
