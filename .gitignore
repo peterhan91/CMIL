@@ -2,7 +2,7 @@
 __pycache__/
 checkpoints/
 torchscale/
-csvs/
+# csvs/
 runs/
 *.py[cod]
 *$py.class

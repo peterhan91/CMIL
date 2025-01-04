@@ -38,7 +38,11 @@ def resize_array(array, new_shape):
 def process_image(row_dict, save_path, new_shape=(384, 512, 512)):
     row = pd.Series(row_dict)
     img_name = row['VolumeName']
-    file_path = row['Path']
+    try:
+        file_path = row['Path']
+    except KeyError:
+        file_path = os.path.join('/mnt/nas/CT/ct_rate_volumes/dataset/valid', row['VolumeName'].split("_")[0]+"_"+row['VolumeName'].split("_")[1], row['VolumeName'].split("_")[0]+"_"+row['VolumeName'].split("_")[1]+"_"+row['VolumeName'].split("_")[2], row['VolumeName'])
+
     slope = float(row["RescaleSlope"])
     intercept = float(row["RescaleIntercept"])
 
@@ -89,7 +93,7 @@ def convert_to_nii(annotations_csv, save_path, new_shape=(384, 512, 512)):
 
 if __name__ == '__main__':
     # Example usage
-    annotations_file = '/home/than/DeepLearning/CMIL/csvs/ct_rate_train_all.csv'  # CSV file with image-text annotations
-    os.makedirs('/mnt/nas/CT/npz_npy', exist_ok=True)
-    output_path = '/mnt/nas/CT/npz_npy'  # Output path for the NIfTI dataset
+    annotations_file = '../csvs/dataset_metadata_validation_metadata.csv'  # CSV file with image-text annotations
+    os.makedirs('/mnt/nas/CT/npz_npy_valid', exist_ok=True)
+    output_path = '/mnt/nas/CT/npz_npy_valid'  # Output path for the NIfTI dataset
     convert_to_nii(annotations_file, output_path)
