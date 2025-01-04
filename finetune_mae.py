@@ -46,12 +46,7 @@ def get_args_parser():
     # Model parameters
     parser.add_argument('--model', default='vit_large_patch16', type=str, metavar='MODEL',
                         help='Name of model to train')
-
-    parser.add_argument('--input_size', default=224, type=int,
-                        help='images input size')
-
-    parser.add_argument('--drop_path', type=float, default=0.1, metavar='PCT',
-                        help='Drop path rate (default: 0.1)')
+    parser.add_argument('--input_size', type=tuple, default=(256, 448, 448), help='input size')
 
     # Optimizer parameters
     parser.add_argument('--clip_grad', type=float, default=None, metavar='NORM',
@@ -73,22 +68,8 @@ def get_args_parser():
                         help='epochs to warmup LR')
 
     # Augmentation parameters
-    parser.add_argument('--color_jitter', type=float, default=None, metavar='PCT',
-                        help='Color jitter factor (enabled only when not using Auto/RandAug)')
-    parser.add_argument('--aa', type=str, default='rand-m9-mstd0.5-inc1', metavar='NAME',
-                        help='Use AutoAugment policy. "v0" or "original". " + "(default: rand-m9-mstd0.5-inc1)'),
     parser.add_argument('--smoothing', type=float, default=0.1,
                         help='Label smoothing (default: 0.1)')
-
-    # * Random Erase params
-    parser.add_argument('--reprob', type=float, default=0.25, metavar='PCT',
-                        help='Random erase prob (default: 0.25)')
-    parser.add_argument('--remode', type=str, default='pixel',
-                        help='Random erase mode (default: "pixel")')
-    parser.add_argument('--recount', type=int, default=1,
-                        help='Random erase count (default: 1)')
-    parser.add_argument('--resplit', action='store_true', default=False,
-                        help='Do not random erase first (clean) augmentation split')
 
     # * Mixup params
     parser.add_argument('--mixup', type=float, default=0,
@@ -113,8 +94,10 @@ def get_args_parser():
                         help='Use class token instead of global pool for classification')
 
     # Dataset parameters
-    parser.add_argument('--data_path', default='/datasets01/imagenet_full_size/061417/', type=str,
-                        help='dataset path')
+    parser.add_argument('--csv_path', default='csvs/ct_rate_train.csv', type=str,
+                        help='csv dataset path')
+    parser.add_argument('--lmdb_path', default='/mnt/nas/Datasets/than/CT/LMDB/ct_rate_train_512.lmdb', type=str,
+                        help='lmdb dataset path')
     parser.add_argument('--nb_classes', default=1000, type=int,
                         help='number of the classification types')
 
