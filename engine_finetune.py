@@ -39,9 +39,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
     optimizer.zero_grad()
 
-    if log_writer is not None:
-        print('log_dir: {}'.format(log_writer.log_dir))
-
     for data_iter_step, (samples, targets) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
 
         # we use a per iteration (instead of per epoch) lr scheduler
@@ -89,8 +86,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             This calibrates different curves when batch size changes.
             """
             epoch_1000x = int((data_iter_step / len(data_loader) + epoch) * 1000)
-            log_writer.add_scalar('loss', loss_value_reduce, epoch_1000x)
-            log_writer.add_scalar('lr', max_lr, epoch_1000x)
+            # Use wandb.log directly
+            log_writer.log({'train_loss': loss_value_reduce, 'lr': max_lr}, step=epoch_1000x)
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()

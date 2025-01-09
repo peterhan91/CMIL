@@ -7,7 +7,7 @@ from models.longmae import PatchEmbed, EncoderConfig, LongNetEncoder, get_3d_sin
 class VisionTransformer(nn.Module):
     def __init__(self, num_classes, img_size=(224, 416, 416), patch_size=(4, 16, 16), in_chans=1,
                  embed_dim=768, depth=12, num_heads=12, mlp_ratio=4., norm_layer=nn.LayerNorm, 
-                 drop_path_rate=0., checkpoint_activations=False, flash_attention=True,
+                 drop_path_rate=0, checkpoint_activations=False, flash_attention=True,
                  dilated_ratio="[1, 2, 4, 8, 16]", segment_length="[768, 1536, 3072, 6144, 12288]"):
         super().__init__()
 
@@ -31,9 +31,16 @@ class VisionTransformer(nn.Module):
             encoder_config, embed_tokens=None, embed_positions=None,
             output_projection=None, is_encoder_decoder=False
         )
-        self.head = nn.Linear(embed_dim, num_classes)
+        
         self.norm = norm_layer(embed_dim)
-
+        self.head = nn.Linear(embed_dim, num_classes)
+    
+    @torch.jit.ignore
+    def no_weight_decay(self):
+        return {
+            "cls_token",
+            "pos_embed",
+        }
 
     def forward(self, x):
         # x: [N, C, D, H, W]
