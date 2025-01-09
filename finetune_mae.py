@@ -16,14 +16,17 @@ import numpy as np
 import os
 import time
 from pathlib import Path
+from multiprocessing import get_context
 
 import torch
 import torch.backends.cudnn as cudnn
+from torch.utils.data import DataLoader
+from prefetch_generator import BackgroundGenerator
 import wandb
 
 from timm.models.layers import trunc_normal_
 from timm.data.mixup import Mixup
-from timm.loss import LabelSmoothingCrossEntropy, SoftTargetCrossEntropy, BinaryCrossEntropy
+from timm.loss import SoftTargetCrossEntropy, BinaryCrossEntropy
 
 import util.lr_decay as lrd
 import misc
@@ -33,6 +36,10 @@ from util.datasets import build_dataset
 from models import models_vit
 
 from engine_finetune import train_one_epoch, evaluate_bce
+
+class DataLoaderX(DataLoader):
+    def __iter__(self):
+        return BackgroundGenerator(super().__iter__())
 
 
 def get_args_parser():
@@ -89,13 +96,15 @@ def get_args_parser():
     parser.add_argument('--finetune', default='',
                         help='finetune from checkpoint')
     parser.add_argument('--global_pool', action='store_true')
-    parser.set_defaults(global_pool=True)
+    parser.set_defaults(global_pool=False)
     parser.add_argument('--cls_token', action='store_false', dest='global_pool',
                         help='Use class token instead of global pool for classification')
 
     # Dataset parameters
-    parser.add_argument('--csv_path', default='csvs/ct_rate_train.csv', type=str,
-                        help='csv dataset path')
+    parser.add_argument('--csv_path_train', default='csvs/ct_rate_train.csv', type=str,
+                        help='csv dataset path for training')
+    parser.add_argument('--csv_path_val', default='csvs/ct_rate_train.csv', type=str,
+                        help='csv dataset path for validation')
     parser.add_argument('--lmdb_path', default='/mnt/nas/Datasets/than/CT/LMDB/ct_rate_train_512.lmdb', type=str,
                         help='lmdb dataset path')
     parser.add_argument('--nb_classes', default=1000, type=int,
@@ -179,21 +188,27 @@ def main(args):
     else:
         log_writer = None
 
-    data_loader_train = torch.utils.data.DataLoader(
-        dataset_train, sampler=sampler_train,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
-        pin_memory=args.pin_mem,
-        drop_last=True,
-    )
+    data_loader_train = DataLoaderX(dataset_train, 
+                                sampler=sampler_train,
+                                shuffle=True if sampler_train is None else False,
+                                batch_size=args.batch_size,
+                                num_workers=args.num_workers,
+                                pin_memory=True,
+                                drop_last=True,
+                                # persistent_workers=True,
+                                multiprocessing_context=get_context('fork'),
+                            )
 
-    data_loader_val = torch.utils.data.DataLoader(
-        dataset_val, sampler=sampler_val,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
-        pin_memory=args.pin_mem,
-        drop_last=False
-    )
+    data_loader_val = DataLoaderX(dataset_val, 
+                                sampler=sampler_val,
+                                shuffle=False,
+                                batch_size=args.batch_size,
+                                num_workers=args.num_workers,
+                                pin_memory=True,
+                                drop_last=False,
+                                # persistent_workers=True,
+                                multiprocessing_context=get_context('fork'),
+                            )
 
     mixup_fn = None
     mixup_active = args.mixup > 0 or args.cutmix > 0. or args.cutmix_minmax is not None
@@ -272,8 +287,6 @@ def main(args):
     if mixup_fn is not None:
         # smoothing is handled with mixup label transform
         criterion = SoftTargetCrossEntropy()
-    elif args.smoothing > 0.:
-        criterion = LabelSmoothingCrossEntropy(smoothing=args.smoothing)
     else: 
         # default to binary cross entropy loss
         criterion = BinaryCrossEntropy(smoothing=args.smoothing)
@@ -282,7 +295,7 @@ def main(args):
 
     misc.load_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
 
-    if args.eval: # needs to be fixed for ROC-AUC computation
+    if args.eval:
         test_stats = evaluate_bce(data_loader_val, model, device)
         print(f"ROC-AUC of the network on the {len(dataset_val)} test images: {test_stats['roc_auc']:.1f}%")
         exit(0)
@@ -308,13 +321,18 @@ def main(args):
                 loss_scaler=loss_scaler, epoch=epoch)
 
         test_stats = evaluate_bce(data_loader_val, model, device)
-        print(f"ROC-AUC of the network on the {len(dataset_val)} test images: {test_stats['roc_auc']:.1f}%")
+        print(f"ROC-AUC of the network on the {len(dataset_val)} test images: {test_stats['roc_auc']:.2f}%")
         max_auc = max(max_auc, test_stats["roc_auc"])
-        print(f'Max accuracy: {max_auc:.2f}%')
+        print(f'Max ROC-AUC: {max_auc:.2f}%')
 
         if log_writer is not None:
-            log_writer.add_scalar('perf/test_auc', test_stats['roc_auc'], epoch)
-            log_writer.add_scalar('perf/test_loss', test_stats['loss'], epoch)
+            log_writer.log({'epoch': epoch, 
+                            'train_loss': train_stats['loss'],
+                            'test_loss': test_stats['loss'], 
+                            'test_auc': test_stats['roc_auc']}
+                            )
+            # log_writer.add_scalar('perf/test_auc', test_stats['roc_auc'], epoch)
+            # log_writer.add_scalar('perf/test_loss', test_stats['loss'], epoch)
 
         log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
                         **{f'test_{k}': v for k, v in test_stats.items()},
@@ -322,8 +340,8 @@ def main(args):
                         'n_parameters': n_parameters}
 
         if args.output_dir and misc.is_main_process():
-            if log_writer is not None:
-                log_writer.flush()
+            # if log_writer is not None:
+            #     log_writer.flush()
             with open(os.path.join(args.output_dir, "log.txt"), mode="a", encoding="utf-8") as f:
                 f.write(json.dumps(log_stats) + "\n")
 
