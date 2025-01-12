@@ -8,7 +8,7 @@
 #SBATCH --job-name="finetune_mae"
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
-#SBATCH --cpus-per-task=12
+#SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:4
 #SBATCH --mem=480G
 #SBATCH --time=4-00:00:00
@@ -47,15 +47,15 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 finetune_mae.py \
     --weight_decay 0.05 \
     --output_dir ${JOB_DIR} \
     --log_dir ${JOB_DIR} \
-    --num_workers 12 \
+    --num_workers 8 \
     --csv_path_train ${CSV_PATH_TRAIN} \
     --csv_path_val ${CSV_PATH_VAL} \
     --nb_classes 18 \
     --lmdb_path ${DATA_DIR} \
     --pin_mem \
     --smoothing 0.0 \
-    --start_epoch 9 \
-    --resume /hpcwork/p0021834/workspace_tianyu/mae_runs/finetune_lr_5e-4/checkpoint-8.pth
+    --start_epoch 16 \
+    --resume /hpcwork/p0021834/workspace_tianyu/mae_runs/finetune_lr_5e-4/checkpoint-15.pth
 
 
 # ========================================
