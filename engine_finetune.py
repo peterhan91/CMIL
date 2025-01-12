@@ -11,6 +11,7 @@
 
 import math
 import sys
+import numpy as np
 from typing import Iterable, Optional
 from sklearn.metrics import roc_auc_score
 
@@ -131,7 +132,7 @@ def evaluate(data_loader, model, device):
 
 
 @torch.no_grad()
-def evaluate_bce(data_loader, model, device):
+def evaluate_bce(data_loader, model, device, save_npy=False):
     criterion = nn.BCEWithLogitsLoss()
     
     metric_logger = misc.MetricLogger(delimiter="  ")
@@ -167,6 +168,10 @@ def evaluate_bce(data_loader, model, device):
     # Concatenate all predictions and targets
     all_preds = torch.cat(all_preds, dim=0).numpy()
     all_targets = torch.cat(all_targets, dim=0).numpy()
+
+    if save_npy:
+        np.save('/home/than/DeepLearning/CMIL/finetune_lr_5e-4/all_preds.npy', all_preds)
+        np.save('/home/than/DeepLearning/CMIL/finetune_lr_5e-4/all_targets.npy', all_targets)
 
     # Compute ROC-AUC (sklearn expects arrays of shape [N] for binary case)
     roc_auc = roc_auc_score(all_targets, all_preds)

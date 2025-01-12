@@ -296,8 +296,8 @@ def main(args):
     misc.load_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
 
     if args.eval:
-        test_stats = evaluate_bce(data_loader_val, model, device)
-        print(f"ROC-AUC of the network on the {len(dataset_val)} test images: {test_stats['roc_auc']:.1f}%")
+        test_stats = evaluate_bce(data_loader_val, model, device, save_npy=True)
+        print(f"ROC-AUC of the network on the {len(dataset_val)} test images: {test_stats['roc_auc']:.3f}%")
         exit(0)
 
 
