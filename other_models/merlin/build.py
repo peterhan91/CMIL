@@ -3,7 +3,7 @@ import copy
 import torch
 from torch import nn
 from transformers import AutoModel, AutoTokenizer
-from nltk.tokenize import wordpunct_tokenize
+# from nltk.tokenize import wordpunct_tokenize
 import torchvision
 
 from other_models.merlin import i3res
