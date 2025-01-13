@@ -12,6 +12,7 @@ runs/
 *$py.class
 *webdataset*
 *.txt
+*.sh
 
 # C extensions
 *.so
