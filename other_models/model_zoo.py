@@ -2,6 +2,19 @@ import torch
 import torch.nn as nn
 
 
+class fmcib_enc(nn.Module):
+    def __init__(self, num_classes, enc):
+        super().__init__()
+        self.cnn = enc
+        self.head = nn.Linear(4096, num_classes)
+
+    def forward(self, x):
+        # assume x has a shape of [N, C, D, H, W] = [N, 1, 240, 480, 480]
+        z = self.cnn(x)
+        z = self.head(z)
+        return z
+
+
 class Merlin_enc(nn.Module):
     def __init__(self, num_classes, enc):
         super().__init__()
