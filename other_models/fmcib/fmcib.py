@@ -1,7 +1,7 @@
 import os
 import pickle
 from pathlib import Path
-import wget
+# import wget
 from monai.networks.nets import resnet50
 from .download_utils import bar_progress
 from .load_model import LoadModel
