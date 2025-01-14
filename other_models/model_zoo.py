@@ -29,23 +29,19 @@ class Merlin_enc(nn.Module):
 
 
 class CT_CLIP_enc(nn.Module):
-    def __init__(self, num_classes, enc):
+    def __init__(self, num_classes, clip):
         super().__init__()
-        self.vit = enc
-        for param in self.vit.parameters():
-            param.requires_grad = True
+        self.vit = clip.visual_transformer
+        self.to_visual_latent = clip.to_visual_latent
+        self.relu = nn.ReLU()
         self.head = nn.Linear(512, num_classes)
-    
-    @torch.jit.ignore
-    def no_weight_decay(self):
-        return {
-            "cls_token",
-            "pos_embed",
-        }
     
     def forward(self, x):
         # assume x has a shape of [N, C, D, H, W] = [N, 1, 240, 480, 480]
         z = self.vit(x, return_encoded_tokens=True)
-        z = torch.mean(z, dim=(1, 2, 3))
+        z = torch.mean(z, dim=1)
+        z = z.view(z.shape[0], -1)
+        z = self.to_visual_latent(z)
+        z = self.relu(z)
         z = self.head(z)
         return z

@@ -5,11 +5,11 @@ JOB_DIR="./finetune_ct_clip"  # Output directory
 CSV_PATH_TRAIN="csvs/dataset_multi_abnormality_labels_test_set.csv"
 CSV_PATH_VAL="csvs/dataset_multi_abnormality_labels_test_set.csv"
 DATA_DIR="/mnt/nas/CT/npz_npy_valid/"  # Dataset directory
-PRETRAIN_CHKPT="/home/than/DeepLearning/CMIL/notebooks/"  # Path to pre-trained checkpoint
+PRETRAIN_CHKPT="/home/than/DeepLearning/CMIL/checkpoints/ctvit/CT-CLIP_v2.pt"  # Path to pre-trained checkpoint
 
 
 # Run the script
-CUDA_VISIBLE_DEVICES=0,1,2 torchrun --nproc_per_node=3 finetune_fmcib.py \
+CUDA_VISIBLE_DEVICES=0,1,2 torchrun --nproc_per_node=3 finetune_ctclip.py \
     --batch_size 1 \
     --accum_iter 64 \
     --finetune ${PRETRAIN_CHKPT} \

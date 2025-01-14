@@ -244,7 +244,7 @@ def main(args):
         msg = clip.load_state_dict(checkpoint, strict=False)
         print(msg)
 
-        model = CT_CLIP_enc(num_classes=args.nb_classes, enc=clip.visual_transformer)
+        model = CT_CLIP_enc(num_classes=args.nb_classes, clip=clip)
 
         # manually initialize fc layer
         trunc_normal_(model.head.weight, std=2e-5)
