@@ -32,7 +32,8 @@ import util.lr_decay as lrd
 import misc
 from misc import NativeScalerWithGradNormCount as NativeScaler
 from util.datasets import build_dataset
-from other_models.model_zoo import ResNet_enc
+from other_models.fmcib.fmcib import fmcib_model
+from other_models.model_zoo import fmcib_enc
 from engine_finetune import train_one_epoch, evaluate_bce
 
 class DataLoaderX(DataLoader):
@@ -220,7 +221,13 @@ def main(args):
     
     ##################### Define the model #####################
     if args.finetune and not args.eval:
-        model = ResNet_enc(in_ch=1, out_ch=args.nb_classes, model=50)
+        enc = fmcib_model(eval_mode=False, ckpt_path=None, 
+                          widen_factor=1, pretrained=True,
+                          bias_downsample=False, conv1_t_stride=1)
+        model = fmcib_enc(num_classes=args.nb_classes, enc=enc)
+
+        # manually initialize fc layer
+        trunc_normal_(model.head.weight, std=2e-5)
     
     model.to(device)
 
