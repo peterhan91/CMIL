@@ -223,8 +223,8 @@ def main(args):
     if args.finetune and not args.eval:
         enc = fmcib_model(eval_mode=False, ckpt_path=None, 
                           widen_factor=1, pretrained=True,
-                          bias_downsample=False, conv1_t_stride=1)
-        model = fmcib_enc(num_classes=args.nb_classes, enc=enc)
+                          bias_downsample=False, conv1_t_stride=2)
+        model = fmcib_enc(num_classes=args.nb_classes, enc=enc, latent_dim=2048)
 
         # manually initialize fc layer
         trunc_normal_(model.head.weight, std=2e-5)
