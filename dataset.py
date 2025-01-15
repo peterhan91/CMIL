@@ -9,7 +9,8 @@ from pathlib import Path
 from torch.utils.data import Dataset, DataLoader
 
 class Simple_Dataset(Dataset):
-    def __init__(self, csv_path, img_folder, file_ext='npz', transforms=None, sub_sample=False):
+    def __init__(self, csv_path, img_folder, file_ext='npz', 
+                 transforms=None, sub_sample=False, task='ct-rate'):
         img_folder = Path(img_folder)
         files = list(img_folder.glob(f'*.{file_ext}'))
         # Build a mapping from VolumeName (with 'nii.gz' extension) to the actual file path
@@ -26,14 +27,22 @@ class Simple_Dataset(Dataset):
         if sub_sample:
             self.df = self.df.sample(n=10, random_state=42).reset_index(drop=True)
         
-        self.columes = [
-            'Medical material', 'Arterial wall calcification', 'Cardiomegaly',
-            'Pericardial effusion', 'Coronary artery wall calcification',
-            'Hiatal hernia', 'Lymphadenopathy', 'Emphysema', 'Atelectasis',
-            'Lung nodule', 'Lung opacity', 'Pulmonary fibrotic sequela',
-            'Pleural effusion', 'Mosaic attenuation pattern', 'Peribronchial thickening',
-            'Consolidation', 'Bronchiectasis', 'Interlobular septal thickening',
-        ]
+        if task == 'ct-rate':
+            self.columes = [
+                'Medical material', 'Arterial wall calcification', 'Cardiomegaly',
+                'Pericardial effusion', 'Coronary artery wall calcification',
+                'Hiatal hernia', 'Lymphadenopathy', 'Emphysema', 'Atelectasis',
+                'Lung nodule', 'Lung opacity', 'Pulmonary fibrotic sequela',
+                'Pleural effusion', 'Mosaic attenuation pattern', 'Peribronchial thickening',
+                'Consolidation', 'Bronchiectasis', 'Interlobular septal thickening',
+            ]
+        elif task == 'inspect':
+            self.columes = [
+                '1_month_mortality', '6_month_mortality', '12_month_mortality',
+                '1_month_readmission', '6_month_readmission', '12_month_readmission',
+                '12_month_PH',
+                'pe_acute', 'pe_subsegmentalonly', 'pe_positive'
+            ]
         
     def __len__(self):
         return len(self.df)
