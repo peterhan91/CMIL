@@ -10,9 +10,12 @@ from other_models.merlin import i3res
 
 
 class ImageEncoder(nn.Module):
-    def __init__(self):
+    def __init__(self, is_marlin=True):
         super().__init__()
-        resnet = torchvision.models.resnet152(pretrained=True)
+        if is_marlin:
+            resnet = torchvision.models.resnet152(pretrained=True)
+        else:
+            resnet = torchvision.models.resnet50(pretrained=True)
         self.i3_resnet = i3res.I3ResNet(
             copy.deepcopy(resnet), class_nb=1692, conv_class=True
         )

@@ -9,7 +9,7 @@ PRETRAIN_CHKPT="/home/than/DeepLearning/CMIL/checkpoints/med3d/resnet_50.pth"  #
 
 
 # Run the script
-CUDA_VISIBLE_DEVICES=0,1,2 torchrun --nproc_per_node=3 finetune_resnet.py \
+CUDA_VISIBLE_DEVICES=0,1,2 torchrun --nproc_per_node=3 finetune_i3d.py \
     --batch_size 1 \
     --accum_iter 64 \
     --finetune ${PRETRAIN_CHKPT} \

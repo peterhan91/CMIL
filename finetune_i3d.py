@@ -32,8 +32,9 @@ import util.lr_decay as lrd
 import misc
 from misc import NativeScalerWithGradNormCount as NativeScaler
 from util.datasets import build_dataset
-from other_models.model_zoo import med3d_enc
-from other_models.med3d.resnet import *
+from other_models.model_zoo import Merlin_enc
+from other_models.merlin import build
+
 from engine_finetune import train_one_epoch, evaluate_bce
 
 class DataLoaderX(DataLoader):
@@ -52,7 +53,7 @@ def get_args_parser():
     # Model parameters
     parser.add_argument('--model', default='vit_large_patch16', type=str, metavar='MODEL',
                         help='Name of model to train')
-    parser.add_argument('--input_size', type=tuple, default=(256, 448, 448), help='input size')
+    parser.add_argument('--input_size', type=tuple, default=(240, 480, 480), help='input size')
 
     # Optimizer parameters
     parser.add_argument('--clip_grad', type=float, default=None, metavar='NORM',
@@ -183,7 +184,7 @@ def main(args):
 
     if global_rank == 0 and args.log_dir is not None and not args.eval:
         os.makedirs(args.log_dir, exist_ok=True)
-        log_writer = wandb.init(project='Med3D_finetune', dir=args.log_dir, config=args)
+        log_writer = wandb.init(project='I3D_finetune', dir=args.log_dir, config=args)
     else:
         log_writer = None
 
@@ -221,23 +222,12 @@ def main(args):
     
     ##################### Define the model #####################
     if args.finetune and not args.eval:
-        backbone = resnet50(sample_input_D = 256,
-                        sample_input_H = 448,
-                        sample_input_W = 448,
-                        no_cuda = False,
-                        num_seg_classes = 1)
-        ckpt = torch.load(args.finetune, map_location='cpu')
-        new_state_dict = {}
-        checkpoint = ckpt['state_dict']
-        for key in checkpoint.keys():
-            new_key = key.replace("module.", "")  # Remove the "encode_image." prefix
-            new_state_dict[new_key] = checkpoint[key]
+        enc = build.ImageEncoder(is_marlin=False)
+        model = Merlin_enc(num_classes=args.nb_classes, enc=enc)
 
-        msg = backbone.load_state_dict(new_state_dict, strict=False)
-        print(msg)
+        # manually initialize fc layer
+        trunc_normal_(model.head.weight, std=2e-5)
 
-        model = med3d_enc(num_classes=args.nb_classes, model=backbone)
-    
     model.to(device)
 
     model_without_ddp = model
