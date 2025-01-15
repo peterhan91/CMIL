@@ -1,8 +1,14 @@
 import torch
 import torch.nn as nn
+import monai.networks.nets as nets
+
+class GetLast(nn.Module):
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        return input[-1]
 
 
-class fmcib_enc(nn.Module):
+class fmcib_enc(nn.Module): 
+    # ResNet-50 with SSL on medical data
     def __init__(self, num_classes, enc):
         super().__init__()
         self.cnn = enc
@@ -13,6 +19,46 @@ class fmcib_enc(nn.Module):
         z = self.cnn(x)
         z = self.head(z)
         return z
+
+
+class med3d_enc(nn.Module): 
+    # ResNet-50 with SL on medical data
+    def __init__(self, num_classes, model):
+        super().__init__()
+        self.model = model
+
+        self.model.conv_seg = nn.Sequential(
+            nn.AdaptiveAvgPool3d(1),
+            nn.Flatten(1),
+            nn.Linear(2048, num_classes),
+        )
+
+    def forward(self, x):
+        x = self.model(x)
+        return x
+
+
+class ResNet_enc(nn.Module):
+    # ResNet-50 with SL on Kinetics dataset
+    def __init__(self, in_ch, out_ch, 
+                 spatial_dims=3, 
+                 model=50,
+                 ):
+        super().__init__()
+        
+        resnet = nets.ResNetFeatures(model_name=f'resnet{model}',  spatial_dims=spatial_dims, in_channels=in_ch)
+        resnet_out_ch = max([ mod.num_features for name, mod in resnet.layer4[-1]._modules.items() if "bn" in name])
+        self.model = nn.Sequential(
+            resnet,
+            GetLast(),
+            nn.AdaptiveAvgPool3d(1),
+            nn.Flatten(1),
+            nn.Linear(resnet_out_ch, out_ch)
+        )
+        
+    def forward(self, source):
+        output = self.model(source) 
+        return output
 
 
 class Merlin_enc(nn.Module):
