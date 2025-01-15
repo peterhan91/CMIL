@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import logging
 import nibabel as nib
-# import SimpleITK as sitk
 import lmdb
 import torch
 import torch.nn.functional as F
@@ -57,52 +56,6 @@ class Simple_Dataset(Dataset):
             img_data = self.transforms(img_data)
         
         label = row[self.columes].values.astype(np.int32)
-        
-        return img_data, label
-
-
-
-class NIB_Dataset(Dataset):
-    def __init__(self, csv_path, target_shape=(384, 512, 512), transforms=None, sub_sample=False):
-        self.df = pd.read_csv(csv_path)
-        self.target_shape = target_shape
-        self.transforms = transforms
-        if sub_sample:
-            self.df = self.df.sample(n=10, random_state=42).reset_index(drop=True)
-
-    def __len__(self):
-        return len(self.df)
-
-    def __getitem__(self, idx): 
-        row = self.df.iloc[idx]
-        img_path = row['Path']
-        img_data = sitk.ReadImage(img_path)
-        img_data = sitk.GetArrayFromImage(img_data)
-        # Apply rescale slope and intercept
-        img_data = float(row["RescaleSlope"]) * img_data + float(row["RescaleIntercept"])
-        hu_min, hu_max = -1000, 1000
-        img_data = np.clip(img_data, hu_min, hu_max)
-        img_data = ((img_data + 1000) / 2000).astype(np.float32)  # Normalize to [0, 1]
-        img_data = img_data.transpose(2, 1, 0)
-        
-        tensor = torch.from_numpy(img_data)
-        tensor = tensor.unsqueeze(0).unsqueeze(0)  # Add batch and channel dimensions
-        img_data = F.interpolate(tensor, size=self.target_shape, 
-                        mode='trilinear', 
-                        align_corners=False)
-        img_data = img_data[0]
-
-        if self.transforms:
-            img_data = self.transforms(img_data)
-        
-        label = []
-        columes = ['Medical material','Arterial wall calcification','Cardiomegaly',
-                   'Pericardial effusion','Coronary artery wall calcification',
-                   'Hiatal hernia','Lymphadenopathy','Emphysema','Atelectasis',
-                   'Lung nodule','Lung opacity','Pulmonary fibrotic sequela',
-                   'Pleural effusion','Mosaic attenuation pattern','Peribronchial thickening',
-                   'Consolidation','Bronchiectasis','Interlobular septal thickening']
-        label = row[columes].values.astype(np.int32)
         
         return img_data, label
 
