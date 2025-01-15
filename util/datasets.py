@@ -9,12 +9,14 @@ def build_dataset(is_train, args):
                                     img_folder=args.lmdb_path,
                                     file_ext='npz',
                                     transforms=transform,
+                                    task=args.task,
         )
     else:
         dataset = Simple_Dataset(csv_path=args.csv_path_val, 
                                     img_folder=args.lmdb_path,
                                     file_ext='npz',
-                                    transforms=transform
+                                    transforms=transform,
+                                    task=args.task,
         )
     return dataset
 
