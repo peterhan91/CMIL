@@ -32,8 +32,9 @@ import util.lr_decay as lrd
 import misc
 from misc import NativeScalerWithGradNormCount as NativeScaler
 from util.datasets import build_dataset
-from other_models.fmcib.fmcib import fmcib_model
 from other_models.model_zoo import fmcib_enc
+from other_models.fmcib.fmcib import fmcib_model
+
 from engine_finetune import train_one_epoch, evaluate_bce
 
 class DataLoaderX(DataLoader):
@@ -52,7 +53,7 @@ def get_args_parser():
     # Model parameters
     parser.add_argument('--model', default='vit_large_patch16', type=str, metavar='MODEL',
                         help='Name of model to train')
-    parser.add_argument('--input_size', type=tuple, default=(256, 448, 448), help='input size')
+    parser.add_argument('--input_size', type=tuple, default=(240, 480, 480), help='input size')
 
     # Optimizer parameters
     parser.add_argument('--clip_grad', type=float, default=None, metavar='NORM',
@@ -221,14 +222,15 @@ def main(args):
     
     ##################### Define the model #####################
     if args.finetune and not args.eval:
-        enc = fmcib_model(eval_mode=False, ckpt_path=None, 
+        enc = fmcib_model(eval_mode=False, ckpt_path=None,
                           widen_factor=1, pretrained=True,
-                          bias_downsample=False, conv1_t_stride=2)
+                          bias_downsample=False, conv1_t_stride=2,)
+
         model = fmcib_enc(num_classes=args.nb_classes, enc=enc, latent_dim=2048)
 
         # manually initialize fc layer
         trunc_normal_(model.head.weight, std=2e-5)
-    
+
     model.to(device)
 
     model_without_ddp = model
