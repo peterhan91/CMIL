@@ -6,7 +6,31 @@ from functools import partial
 from utils import trunc_normal_
 from torchscale.architecture.config import EncoderConfig
 from torchscale.model.LongNet import LongNetEncoder
-from models.longvit import PatchEmbed
+
+
+class PatchEmbed(nn.Module):
+    """3D Image to Patch Embedding"""
+    def __init__(self, img_size=(256, 512, 512), patch_size=(4, 16, 16), in_chans=1, embed_dim=768):
+        super().__init__()
+        if isinstance(img_size, int):
+            img_size = (img_size,) * 3
+        if isinstance(patch_size, int):
+            patch_size = (patch_size,) * 3
+        self.img_size = img_size
+        self.patch_size = patch_size
+        self.D_patches = img_size[0] // patch_size[0]
+        self.H_patches = img_size[1] // patch_size[1]
+        self.W_patches = img_size[2] // patch_size[2]
+        self.num_patches = self.D_patches * self.H_patches * self.W_patches
+        print(f"Number of patches: {self.num_patches}")
+
+        self.proj = nn.Conv3d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
+
+    def forward(self, x):
+        # x: (B, C, D, H, W)
+        x = self.proj(x)  # (B, embed_dim, D', H', W')
+        x = x.flatten(2).transpose(1, 2)  # (B, N_patches, embed_dim)
+        return x
 
 
 def get_3d_sincos_pos_embed(embed_dim, grid_size, cls_token=False):

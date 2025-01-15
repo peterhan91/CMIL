@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from functools import partial
-from models.longmae import PatchEmbed, EncoderConfig, LongNetEncoder, get_3d_sincos_pos_embed, trunc_normal_
+from models.longmae import PatchEmbed, EncoderConfig, LongNetEncoder
 
 
 class VisionTransformer(nn.Module):
