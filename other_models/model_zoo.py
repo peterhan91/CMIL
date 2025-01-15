@@ -9,10 +9,10 @@ class GetLast(nn.Module):
 
 class fmcib_enc(nn.Module): 
     # ResNet-50 with SSL on medical data
-    def __init__(self, num_classes, enc):
+    def __init__(self, num_classes, enc, latent_dim=4096):
         super().__init__()
         self.cnn = enc
-        self.head = nn.Linear(4096, num_classes)
+        self.head = nn.Linear(latent_dim, num_classes)
 
     def forward(self, x):
         # assume x has a shape of [N, C, D, H, W] = [N, 1, 240, 480, 480]
