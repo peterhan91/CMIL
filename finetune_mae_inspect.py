@@ -239,7 +239,7 @@ def main(args):
                 del checkpoint_model[k]
 
         # interpolate position embedding
-        # interpolate_pos_embed(model, checkpoint_model)
+        interpolate_pos_embed(model, checkpoint_model, old_size=(128, 224, 224))
 
         # load pre-trained model
         msg = model.load_state_dict(checkpoint_model, strict=False)
