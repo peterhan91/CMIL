@@ -37,7 +37,7 @@ PRETRAIN_CHKPT="/hpcwork/p0021834/workspace_tianyu/mae_runs/finetune_lr_5e-4/che
 
 # Run the script
 CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 finetune_mae_inspect.py \
-    --wandb_project_name "finetune_MAE_respect" \
+    --wandb_project "finetune_MAE_respect" \
     --task respect \
     --batch_size 2 \
     --accum_iter 128 \
@@ -52,7 +52,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 finetune_mae_inspect.py
     --num_workers 8 \
     --csv_path_train ${CSV_PATH_TRAIN} \
     --csv_path_val ${CSV_PATH_VAL} \
-    --nb_classes 10 \
+    --nb_classes 8 \
     --lmdb_path ${DATA_DIR} \
     --pin_mem \
     --smoothing 0.0 \

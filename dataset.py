@@ -50,6 +50,11 @@ class Simple_Dataset(Dataset):
                 'leftsided_pe', 'rightsided_pe', 'central_pe', 
                 'acute_and_chronic_pe', 'chronic_pe',
             ]
+        elif task == 'lidc':
+            self.columes = [
+                'Malignant', 'Calcification', 
+                'Sphericity', 'Margin', 'Lobulation', 'Spiculation', 'Texture'
+            ]
         
     def __len__(self):
         return len(self.df)
