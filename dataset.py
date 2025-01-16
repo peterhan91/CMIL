@@ -53,7 +53,8 @@ class Simple_Dataset(Dataset):
         elif task == 'lidc':
             self.columes = [
                 'Malignant', 'Calcification', 
-                'Sphericity', 'Margin', 'Lobulation', 'Spiculation', 'Texture'
+                'Sphericity', 'Margin', 'Lobulation', 
+                'Spiculation', 'Texture'
             ]
         
     def __len__(self):
