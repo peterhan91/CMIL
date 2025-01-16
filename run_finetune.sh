@@ -28,11 +28,11 @@ echo "Environment Variables:"; export | grep -E "CUDA|CONDA"; echo
 echo "NVIDIA-SMI Output:"; nvidia-smi; echo
 
 # Set paths
-JOB_DIR="/hpcwork/p0021834/workspace_tianyu/mae_runs/finetune_inspect"
+JOB_DIR="/hpcwork/p0021834/workspace_tianyu/mae_runs/finetune_inspect_init"
 CSV_PATH_TRAIN="/hpcwork/p0021834/workspace_tianyu/codes/CMIL/csvs/inspect2_train.csv"
 CSV_PATH_VAL="/hpcwork/p0021834/workspace_tianyu/codes/CMIL/csvs/inspect2_validation_set.csv"
 DATA_DIR="/hpcwork/p0021834/workspace_tianyu/inspect/"  # Dataset directory
-PRETRAIN_CHKPT="/hpcwork/p0021834/workspace_tianyu/mae_runs/finetune_lr_5e-4/checkpoint-20.pth"  # Path to pre-trained checkpoint
+PRETRAIN_CHKPT="/hpcwork/p0021834/workspace_tianyu/mae_runs/checkpoint-799.pth"  # Path to pre-trained checkpoint
 
 
 # Run the script
