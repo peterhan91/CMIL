@@ -12,6 +12,7 @@
 import math
 import sys
 import numpy as np
+import pandas as pd
 from typing import Iterable, Optional
 from sklearn.metrics import roc_auc_score
 
@@ -189,3 +190,29 @@ def evaluate_bce(data_loader, model, device, save_npy=False):
           ))
 
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+
+
+@torch.no_grad()
+def extract_features(data_loader, model, device):
+    # switch to evaluation mode
+    model.eval()
+    metric_logger = misc.MetricLogger(delimiter="  ")
+    header = 'Feature extraction:'
+
+    feature_list = []
+
+    for batch in metric_logger.log_every(data_loader, 10, header):
+        images = batch[0]
+        images = images.to(device, non_blocking=True)
+
+        # compute output
+        with torch.amp.autocast('cuda'):
+            feature, _ = model(images, return_feature=True)
+            feature_list.append(feature.detach().cpu().numpy())
+    
+    features = np.concatenate(feature_list, axis=0)
+    # Flatten features into a list
+    features = features.reshape(-1, 768)
+    # Add the features to the dataframe
+    df = pd.concat([df, pd.DataFrame(features, columns=[f"pred_{idx}" for idx in range(768)])], axis=1)
+    return df
