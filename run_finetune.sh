@@ -5,7 +5,7 @@
 
 #SBATCH -A p0021834
 #SBATCH -p c23g
-#SBATCH --job-name="finetune_mae_respect"
+#SBATCH --job-name="finetune_mae_inspect"
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=8
@@ -28,17 +28,17 @@ echo "Environment Variables:"; export | grep -E "CUDA|CONDA"; echo
 echo "NVIDIA-SMI Output:"; nvidia-smi; echo
 
 # Set paths
-JOB_DIR="/hpcwork/p0021834/workspace_tianyu/mae_runs/finetune_respect"
-CSV_PATH_TRAIN="/hpcwork/p0021834/workspace_tianyu/codes/CMIL/csvs/rsna_2020_train.csv"
-CSV_PATH_VAL="/hpcwork/p0021834/workspace_tianyu/codes/CMIL/csvs/rsna_2020_validation_set.csv"
-DATA_DIR="/hpcwork/p0021834/workspace_tianyu/respect/"  # Dataset directory
-PRETRAIN_CHKPT="/hpcwork/p0021834/workspace_tianyu/mae_runs/finetune_lr_5e-4/checkpoint-20.pth"  # Path to pre-trained checkpoint
+JOB_DIR="/hpcwork/p0021834/workspace_tianyu/mae_runs/finetune_inspect_init"
+CSV_PATH_TRAIN="/hpcwork/p0021834/workspace_tianyu/codes/CMIL/csvs/inspect_2_train.csv"
+CSV_PATH_VAL="/hpcwork/p0021834/workspace_tianyu/codes/CMIL/csvs/inspect_2_validation_set.csv"
+DATA_DIR="/hpcwork/p0021834/workspace_tianyu/inspect/"  # Dataset directory
+PRETRAIN_CHKPT="/hpcwork/p0021834/workspace_tianyu/mae_runs/checkpoint-799.pth"  # Path to pre-trained checkpoint
 
 
 # Run the script
 CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 finetune_mae_inspect.py \
-    --wandb_project "finetune_MAE_respect" \
-    --task respect \
+    --wandb_project "MAE_finetune" \
+    --task inspect \
     --batch_size 2 \
     --accum_iter 128 \
     --model vit_base_patch16 \
@@ -52,7 +52,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 finetune_mae_inspect.py
     --num_workers 8 \
     --csv_path_train ${CSV_PATH_TRAIN} \
     --csv_path_val ${CSV_PATH_VAL} \
-    --nb_classes 8 \
+    --nb_classes 10 \
     --lmdb_path ${DATA_DIR} \
     --pin_mem \
     --smoothing 0.0 \
