@@ -48,7 +48,7 @@ def check_npz_files(directory, output_json):
 
 if __name__ == "__main__":
     # Change these to your paths
-    npz_directory = "/mnt/nas/CT/npz_npy_INSPECT/"  # Directory containing .npz files
+    npz_directory = "/mnt/nas/CT/npz_npy_nsclc_radiomics/"  # Directory containing .npz files
     output_json_path = "bad_files.json"        # Path to save the JSON file
 
     check_npz_files(npz_directory, output_json_path)

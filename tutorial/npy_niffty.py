@@ -50,8 +50,10 @@ def dicom_to_nifti(dicom_folder):
         ds = pydicom.dcmread(dcm_path)
         pixel_array = ds.pixel_array  # 2D array for a single slice
         volume_slices.append(pixel_array)
-
-    volume_3d = np.stack(volume_slices, axis=0)  # shape: (num_slices, height, width)
+    try:
+        volume_3d = np.stack(volume_slices, axis=0)  # shape: (num_slices, height, width)
+    except:
+        return None
 
     # Step 5: Construct an approximate affine transform.
     px_spacing = getattr(ref_ds, "PixelSpacing", [1.0, 1.0])  # [row spacing, col spacing]
@@ -78,23 +80,27 @@ def convert_and_save_nifti(file_name, source_root, save_dir):
     - save_dir: where to save the resulting NIfTI file
     """
     # Prepare the input DICOM folder path (adjust logic to match your folder structure)
-    parts = file_name.split('_')
-    dicom_folder = os.path.join(source_root, parts[0], parts[1].split('.')[0])
+    # parts = file_name.split('_')
+    # dicom_folder = os.path.join(source_root, parts[0], parts[1].split('.')[0])
+    dicom_folder = os.path.join(source_root, file_name)
     
     # Convert
     nii = dicom_to_nifti(dicom_folder)
     
     # Save
-    save_path = os.path.join(save_dir, file_name)
+    if nii is None:
+        print(f"Failed to convert {file_name}")
+        return
+    save_path = os.path.join(save_dir, file_name + '.nii.gz')
     nib.save(nii, save_path)
 
 
 if __name__ == '__main__':
-    save_dir = '/mnt/nas/CT/RSNA_RESPECT/'
-    source_root = '/mnt/nas/CT/rsna_pulmonary/train/'
+    save_dir = '/mnt/nas/CT/NSCLC_Radiogenomics_NII/'
+    source_root = '/mnt/nas/CT/NSCLC-Radiogenomics/'
     
     # DataFrame with metadata
-    df = pd.read_csv('/home/than/DeepLearning/CMIL/csvs/RSNA_2020_metadata.csv')
+    df = pd.read_csv('/home/than/DeepLearning/CMIL/csvs/NSCLC_Radiogenomics_metadata.csv')
     
     # Filter out volumes already processed
     processed = [os.path.basename(x) for x in glob(os.path.join(save_dir, '*.nii.gz'))]
@@ -116,7 +122,5 @@ if __name__ == '__main__':
             desc="Converting DICOM to NIfTI"
         ):
             pass
-
-    print("All conversions completed!")
 
     print("All conversions completed!")
