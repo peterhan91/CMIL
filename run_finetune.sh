@@ -28,15 +28,17 @@ echo "Environment Variables:"; export | grep -E "CUDA|CONDA"; echo
 echo "NVIDIA-SMI Output:"; nvidia-smi; echo
 
 # Set paths
-JOB_DIR="/hpcwork/p0021834/workspace_tianyu/mae_runs/finetune_inspect"
-CSV_PATH_TRAIN="/hpcwork/p0021834/workspace_tianyu/codes/CMIL/csvs/inspect2_train.csv"
-CSV_PATH_VAL="/hpcwork/p0021834/workspace_tianyu/codes/CMIL/csvs/inspect2_validation_set.csv"
+JOB_DIR="/hpcwork/p0021834/workspace_tianyu/mae_runs/finetune_inspect_init"
+CSV_PATH_TRAIN="/hpcwork/p0021834/workspace_tianyu/codes/CMIL/csvs/inspect_2_train.csv"
+CSV_PATH_VAL="/hpcwork/p0021834/workspace_tianyu/codes/CMIL/csvs/inspect_2_validation_set.csv"
 DATA_DIR="/hpcwork/p0021834/workspace_tianyu/inspect/"  # Dataset directory
 PRETRAIN_CHKPT="/hpcwork/p0021834/workspace_tianyu/mae_runs/checkpoint-799.pth"  # Path to pre-trained checkpoint
 
 
 # Run the script
 CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 finetune_mae_inspect.py \
+    --wandb_project "MAE_finetune" \
+    --task inspect \
     --batch_size 2 \
     --accum_iter 128 \
     --model vit_base_patch16 \
@@ -52,11 +54,8 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 finetune_mae_inspect.py
     --csv_path_val ${CSV_PATH_VAL} \
     --nb_classes 10 \
     --lmdb_path ${DATA_DIR} \
-    --task inspect \
     --pin_mem \
     --smoothing 0.0 \
-    --start_epoch 0 \
-    --resume /hpcwork/p0021834/workspace_tianyu/mae_runs/finetune_lr_5e-4/checkpoint-20.pth
 
 
 # ========================================

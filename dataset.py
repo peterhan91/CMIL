@@ -43,6 +43,19 @@ class Simple_Dataset(Dataset):
                 '12_month_PH',
                 'pe_acute', 'pe_subsegmentalonly', 'pe_positive'
             ]
+        elif task == 'respect':
+            self.columes = [
+                'positive_exam_for_pe', 
+                'rv_lv_ratio_gte_1', 'rv_lv_ratio_lt_1',
+                'leftsided_pe', 'rightsided_pe', 'central_pe', 
+                'acute_and_chronic_pe', 'chronic_pe',
+            ]
+        elif task == 'lidc':
+            self.columes = [
+                'Malignant', 'Calcification', 
+                'Sphericity', 'Margin', 'Lobulation', 
+                'Spiculation', 'Texture'
+            ]
         
     def __len__(self):
         return len(self.df)

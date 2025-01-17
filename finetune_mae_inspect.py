@@ -54,6 +54,7 @@ def get_args_parser():
     parser.add_argument('--model', default='vit_large_patch16', type=str, metavar='MODEL',
                         help='Name of model to train')
     parser.add_argument('--input_size', type=tuple, default=(256, 448, 448), help='input size')
+    parser.add_argument('--old_input_size', type=tuple, default=(128, 224, 224), help='old input size')
 
     # Optimizer parameters
     parser.add_argument('--clip_grad', type=float, default=None, metavar='NORM',
@@ -116,6 +117,8 @@ def get_args_parser():
                         help='path where to save, empty for no saving')
     parser.add_argument('--log_dir', default='./output_dir',
                         help='path where to tensorboard log')
+    parser.add_argument('--wandb_project', default='MAE_finetune',
+                        help='wandb project name')
     parser.add_argument('--device', default='cuda',
                         help='device to use for training / testing')
     parser.add_argument('--seed', default=0, type=int)
@@ -186,7 +189,7 @@ def main(args):
 
     if global_rank == 0 and args.log_dir is not None and not args.eval:
         os.makedirs(args.log_dir, exist_ok=True)
-        log_writer = wandb.init(project='MAE_finetune', dir=args.log_dir, config=args)
+        log_writer = wandb.init(project=args.wandb_project, dir=args.log_dir, config=args)
     else:
         log_writer = None
 
@@ -239,7 +242,8 @@ def main(args):
                 del checkpoint_model[k]
 
         # interpolate position embedding
-        interpolate_pos_embed(model, checkpoint_model)
+        if args.old_input_size != args.input_size:
+            interpolate_pos_embed(model, checkpoint_model, old_size=args.old_input_size)
 
         # load pre-trained model
         msg = model.load_state_dict(checkpoint_model, strict=False)

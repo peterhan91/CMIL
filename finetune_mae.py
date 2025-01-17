@@ -35,7 +35,7 @@ from util.pos_embed import interpolate_pos_embed
 from util.datasets import build_dataset
 from models import models_vit
 
-from engine_finetune import train_one_epoch, evaluate_bce
+from engine_finetune import train_one_epoch, evaluate_bce, extract_features
 
 class DataLoaderX(DataLoader):
     def __iter__(self):
@@ -131,6 +131,8 @@ def get_args_parser():
                         help='Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.')
     parser.add_argument('--no_pin_mem', action='store_false', dest='pin_mem')
     parser.set_defaults(pin_mem=True)
+    parser.add_argument('--feature_extration', action='store_true',
+                        help='feature extraction mode')
 
     # distributed training parameters
     parser.add_argument('--world_size', default=1, type=int,
@@ -300,6 +302,10 @@ def main(args):
         print(f"ROC-AUC of the network on the {len(dataset_val)} test images: {test_stats['roc_auc']:.3f}%")
         exit(0)
 
+    if args.feature_extration:
+        df = extract_features(data_loader_val, model, device)
+        save_path = os.path.join(args.output_dir, os.path.basename(args.csv_path_val).replace('.csv', '_features.csv'))
+        df.to_csv(save_path, index=False)
 
     ##################### Start training #####################
     print(f"Start training for {args.epochs} epochs")
