@@ -12,6 +12,7 @@ runs/
 *webdataset*
 *.txt
 *.sh
+features/
 
 # C extensions
 *.so

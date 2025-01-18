@@ -193,26 +193,50 @@ def evaluate_bce(data_loader, model, device, save_npy=False):
 
 
 @torch.no_grad()
-def extract_features(data_loader, model, device):
-    # switch to evaluation mode
+def extract_features(data_loader, model, device, df=None):
+    """
+    Extract features from a data loader using the given model and add them to a DataFrame.
+
+    Args:
+        data_loader (torch.utils.data.DataLoader): The data loader providing batches of data.
+        model (torch.nn.Module): The model for feature extraction.
+        device (torch.device): The device (e.g., 'cuda' or 'cpu') to use for computation.
+        df (pd.DataFrame, optional): Existing DataFrame to which features will be added. Defaults to None.
+
+    Returns:
+        pd.DataFrame: DataFrame with extracted features added.
+    """
+    # Ensure the model is in evaluation mode
     model.eval()
     metric_logger = misc.MetricLogger(delimiter="  ")
     header = 'Feature extraction:'
 
     feature_list = []
 
+    # Iterate over the data loader with logging
     for batch in metric_logger.log_every(data_loader, 10, header):
-        images = batch[0]
+        images = batch[0]  # Assuming the batch contains images as the first element
         images = images.to(device, non_blocking=True)
 
-        # compute output
-        with torch.amp.autocast('cuda'):
+        # Compute features using mixed precision if available
+        with torch.amp.autocast(device_type='cuda'):
             feature, _ = model(images, return_feature=True)
             feature_list.append(feature.detach().cpu().numpy())
-    
+
+    # Combine all extracted features into a single array
     features = np.concatenate(feature_list, axis=0)
-    # Flatten features into a list
-    features = features.reshape(-1, 768)
-    # Add the features to the dataframe
-    df = pd.concat([df, pd.DataFrame(features, columns=[f"pred_{idx}" for idx in range(768)])], axis=1)
+
+    # Reshape features into a flat list (if necessary, based on feature dimensions)
+    features = features.reshape(-1, features.shape[-1])
+
+    # Create a DataFrame for features
+    feature_df = pd.DataFrame(features, columns=[f"pred_{idx}" for idx in range(features.shape[1])])
+
+    # If an existing DataFrame is provided, concatenate features; otherwise, return feature_df
+    if df is not None:
+        df = pd.concat([df, feature_df], axis=1)
+    else:
+        df = feature_df
+
     return df
+

@@ -50,11 +50,9 @@ class Simple_Dataset(Dataset):
                 'leftsided_pe', 'rightsided_pe', 'central_pe', 
                 'acute_and_chronic_pe', 'chronic_pe',
             ]
-        elif task == 'lidc':
+        elif task == 'nsclc_radiomics':
             self.columes = [
-                'Malignant', 'Calcification', 
-                'Sphericity', 'Margin', 'Lobulation', 
-                'Spiculation', 'Texture'
+                'Overall.Stage.map'
             ]
         
     def __len__(self):

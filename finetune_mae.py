@@ -13,6 +13,7 @@ import argparse
 import datetime
 import json
 import numpy as np
+import pandas as pd
 import os
 import time
 from pathlib import Path
@@ -109,6 +110,8 @@ def get_args_parser():
                         help='lmdb dataset path')
     parser.add_argument('--nb_classes', default=1000, type=int,
                         help='number of the classification types')
+    parser.add_argument('--task', default='inspect', type=str,
+                        help='task name')
 
     parser.add_argument('--output_dir', default='./output_dir',
                         help='path where to save, empty for no saving')
@@ -303,9 +306,12 @@ def main(args):
         exit(0)
 
     if args.feature_extration:
-        df = extract_features(data_loader_val, model, device)
+        df_input = pd.read_csv(args.csv_path_val)
+        df = extract_features(data_loader_val, model, device, df=df_input)
         save_path = os.path.join(args.output_dir, os.path.basename(args.csv_path_val).replace('.csv', '_features.csv'))
         df.to_csv(save_path, index=False)
+        print(f"Features extraction completed!")
+        exit(0)
 
     ##################### Start training #####################
     print(f"Start training for {args.epochs} epochs")
