@@ -54,7 +54,7 @@ def get_args_parser():
     parser.add_argument('--model', default='vit_large_patch16', type=str, metavar='MODEL',
                         help='Name of model to train')
     parser.add_argument('--input_size', type=tuple, default=(256, 448, 448), help='input size')
-    parser.add_argument('--old_input_size', type=tuple, default=(128, 224, 224), help='old input size')
+    parser.add_argument('--old_input_size', type=tuple, default=(256, 448, 448), help='old input size')
 
     # Optimizer parameters
     parser.add_argument('--clip_grad', type=float, default=None, metavar='NORM',

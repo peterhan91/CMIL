@@ -5,7 +5,7 @@
 
 #SBATCH -A p0021834
 #SBATCH -p c23g
-#SBATCH --job-name="finetune_mae_inspect"
+#SBATCH --job-name="finetune_mae"
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=8
@@ -28,17 +28,17 @@ echo "Environment Variables:"; export | grep -E "CUDA|CONDA"; echo
 echo "NVIDIA-SMI Output:"; nvidia-smi; echo
 
 # Set paths
-JOB_DIR="/hpcwork/p0021834/workspace_tianyu/mae_runs/finetune_inspect_init"
-CSV_PATH_TRAIN="/hpcwork/p0021834/workspace_tianyu/codes/CMIL/csvs/inspect_2_train.csv"
-CSV_PATH_VAL="/hpcwork/p0021834/workspace_tianyu/codes/CMIL/csvs/inspect_2_validation_set.csv"
-DATA_DIR="/hpcwork/p0021834/workspace_tianyu/inspect/"  # Dataset directory
-PRETRAIN_CHKPT="/hpcwork/p0021834/workspace_tianyu/mae_runs/checkpoint-799.pth"  # Path to pre-trained checkpoint
+JOB_DIR="/hpcwork/th900468/workspace_tianyu/mae_runs/finetune_mae_init"
+CSV_PATH_TRAIN="/hpcwork/p0021834/workspace_tianyu/codes/CMIL/csvs/dataset_multi_abnormality_labels_train_predicted_labels.csv"
+CSV_PATH_VAL="/hpcwork/p0021834/workspace_tianyu/codes/CMIL/csvs/dataset_multi_abnormality_labels_validation_set.csv"
+DATA_DIR="/hpcwork/p0021834/workspace_tianyu/ct_rate/"  # Dataset directory
+PRETRAIN_CHKPT="/hpcwork/p0021834/workspace_tianyu/mae_runs/finetune_inspect_init/checkpoint-25.pth"  # Path to pre-trained checkpoint
 
 
 # Run the script
 CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 finetune_mae_inspect.py \
     --wandb_project "MAE_finetune" \
-    --task inspect \
+    --task ct-rate \
     --batch_size 2 \
     --accum_iter 128 \
     --model vit_base_patch16 \
@@ -52,10 +52,12 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 finetune_mae_inspect.py
     --num_workers 8 \
     --csv_path_train ${CSV_PATH_TRAIN} \
     --csv_path_val ${CSV_PATH_VAL} \
-    --nb_classes 10 \
+    --nb_classes 18 \
     --lmdb_path ${DATA_DIR} \
     --pin_mem \
     --smoothing 0.0 \
+    --start_epoch 23 \
+    --resume /hpcwork/p0021834/workspace_tianyu/mae_runs/finetune_mae_init/checkpoint-22.pth
 
 
 # ========================================
