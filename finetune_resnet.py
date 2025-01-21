@@ -107,6 +107,8 @@ def get_args_parser():
                         help='csv dataset path for validation')
     parser.add_argument('--lmdb_path', default='/mnt/nas/Datasets/than/CT/LMDB/ct_rate_train_512.lmdb', type=str,
                         help='lmdb dataset path')
+    parser.add_argument('--task', default='ct-rate', type=str,
+                        help='task name')
     parser.add_argument('--nb_classes', default=1000, type=int,
                         help='number of the classification types')
 
