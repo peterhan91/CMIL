@@ -19,6 +19,7 @@ from pathlib import Path
 from multiprocessing import get_context
 
 import torch
+import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
 from prefetch_generator import BackgroundGenerator
@@ -225,7 +226,7 @@ def main(args):
     ##################### Define the model #####################
     if args.finetune and not args.eval:
         enc = fmcib_model(eval_mode=False, ckpt_path=None,
-                          widen_factor=1, pretrained=True,
+                          widen_factor=1, pretrained=False,
                           bias_downsample=False, conv1_t_stride=2,)
 
         model = fmcib_enc(num_classes=args.nb_classes, enc=enc, latent_dim=2048)
@@ -269,7 +270,7 @@ def main(args):
         criterion = SoftTargetCrossEntropy()
     else: 
         # default to binary cross entropy loss
-        criterion = BinaryCrossEntropy(smoothing=args.smoothing)
+        criterion = nn.BCEWithLogitsLoss()
 
     print("criterion = %s" % str(criterion))
 
