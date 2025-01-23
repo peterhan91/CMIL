@@ -2,6 +2,31 @@ import torch
 import torch.nn as nn
 import monai.networks.nets as nets
 
+
+def get_model(args):
+    if args.model_name == 'med3d':
+        from other_models.fmcib.fmcib import fmcib_model
+        enc = fmcib_model(eval_mode=False, ckpt_path=None,
+                    widen_factor=1, pretrained=True,
+                    bias_downsample=False, conv1_t_stride=2,)
+        model = fmcib_enc(num_classes=args.nb_classes, enc=enc, latent_dim=2048)
+
+    elif args.model_name == 'fmcib':
+        from other_models.fmcib.fmcib import fmcib_model
+        enc = fmcib_model(eval_mode=False, ckpt_path=args.finetune)
+        model = fmcib_enc(num_classes=args.nb_classes, enc=enc)
+    
+    elif args.model_name == 'i3d':
+        from other_models.merlin import build
+        enc = build.ImageEncoder(is_marlin=False)
+        model = Merlin_enc(num_classes=args.nb_classes, enc=enc)
+
+    else:
+        raise ValueError(f"Model {args.model_name} not found.")
+    
+    return model
+
+
 class GetLast(nn.Module):
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         return input[-1]
