@@ -13,6 +13,7 @@ import argparse
 import datetime
 import json
 import numpy as np
+import pandas as pd
 import os
 import time
 from pathlib import Path
@@ -35,7 +36,7 @@ from util.pos_embed import interpolate_pos_embed
 from util.datasets import build_dataset
 from models import models_vit
 
-from engine_finetune import train_one_epoch, evaluate_bce
+from engine_finetune import train_one_epoch, evaluate_bce, extract_features
 
 class DataLoaderX(DataLoader):
     def __iter__(self):
@@ -105,6 +106,8 @@ def get_args_parser():
                         help='csv dataset path for training')
     parser.add_argument('--csv_path_val', default='csvs/ct_rate_train.csv', type=str,
                         help='csv dataset path for validation')
+    parser.add_argument('--task', default='inspect', type=str,
+                        help='task name')
     parser.add_argument('--lmdb_path', default='/mnt/nas/Datasets/than/CT/LMDB/ct_rate_train_512.lmdb', type=str,
                         help='lmdb dataset path')
     parser.add_argument('--nb_classes', default=1000, type=int,
@@ -119,6 +122,8 @@ def get_args_parser():
     parser.add_argument('--seed', default=0, type=int)
     parser.add_argument('--resume', default='',
                         help='resume from checkpoint')
+    parser.add_argument('--feature_extration', action='store_true',
+                        help='feature extraction mode')
 
     parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
                         help='start epoch')
@@ -296,11 +301,17 @@ def main(args):
     misc.load_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
 
     if args.eval:
-        test_stats = evaluate_bce(data_loader_val, model, device, save_npy=True)
+        test_stats = evaluate_bce(data_loader_val, model, device, save_npy=args.output_dir)
         print(f"ROC-AUC of the network on the {len(dataset_val)} test images: {test_stats['roc_auc']:.3f}%")
         exit(0)
 
-
+    if args.feature_extration:
+        df_input = pd.read_csv(args.csv_path_val)
+        df = extract_features(data_loader_val, model, device, df=df_input)
+        save_path = os.path.join(args.output_dir, os.path.basename(args.csv_path_val).replace('.csv', '_features.csv'))
+        df.to_csv(save_path, index=False)
+        print(f"Features extraction completed!")
+        exit(0)
     ##################### Start training #####################
     print(f"Start training for {args.epochs} epochs")
     start_time = time.time()

@@ -42,7 +42,7 @@ class VisionTransformer(nn.Module):
             "pos_embed",
         }
 
-    def forward(self, x):
+    def forward(self, x, return_feature=False):
         # x: [N, C, D, H, W]
         x = self.patch_embed(x)  # [N, L, D]
         x = x + self.pos_embed[:, 1:, :]
@@ -52,6 +52,10 @@ class VisionTransformer(nn.Module):
         x = torch.cat([cls_token.expand(x.shape[0], -1, -1), x], dim=1)
         x = self.encoder(src_tokens=None, token_embeddings=x)["encoder_out"]
         x = self.norm(x)
+
+        if return_feature:
+            return x[:, 0], x[:, 1:]
+        
         x = self.head(x[:, 0])
         return x
     

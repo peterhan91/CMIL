@@ -43,6 +43,10 @@ class Simple_Dataset(Dataset):
                 '12_month_PH',
                 'pe_acute', 'pe_subsegmentalonly', 'pe_positive'
             ]
+        elif task == 'stoic':
+            self.columes = [
+                'probCOVID', 'probSevere',
+            ]
         
     def __len__(self):
         return len(self.df)

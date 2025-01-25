@@ -10,8 +10,10 @@
 # --------------------------------------------------------
 
 import math
+import os
 import sys
 import numpy as np
+import pandas as pd
 from typing import Iterable, Optional
 from sklearn.metrics import roc_auc_score
 
@@ -132,7 +134,7 @@ def evaluate(data_loader, model, device):
 
 
 @torch.no_grad()
-def evaluate_bce(data_loader, model, device, save_npy=False):
+def evaluate_bce(data_loader, model, device, save_npy=None):
     criterion = nn.BCEWithLogitsLoss()
     
     metric_logger = misc.MetricLogger(delimiter="  ")
@@ -169,9 +171,9 @@ def evaluate_bce(data_loader, model, device, save_npy=False):
     all_preds = torch.cat(all_preds, dim=0).numpy()
     all_targets = torch.cat(all_targets, dim=0).numpy()
 
-    if save_npy:
-        np.save('/home/than/DeepLearning/CMIL/finetune_lr_5e-4/all_preds.npy', all_preds)
-        np.save('/home/than/DeepLearning/CMIL/finetune_lr_5e-4/all_targets.npy', all_targets)
+    if save_npy is not None:
+        np.save(os.path.join(save_npy, 'all_preds.npy'), all_preds)
+        np.save(os.path.join(save_npy, 'all_targets.npy'), all_targets)
 
     # Compute ROC-AUC (sklearn expects arrays of shape [N] for binary case)
     roc_auc = roc_auc_score(all_targets, all_preds)
@@ -189,3 +191,52 @@ def evaluate_bce(data_loader, model, device, save_npy=False):
           ))
 
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+
+
+@torch.no_grad()
+def extract_features(data_loader, model, device, df=None):
+    """
+    Extract features from a data loader using the given model and add them to a DataFrame.
+
+    Args:
+        data_loader (torch.utils.data.DataLoader): The data loader providing batches of data.
+        model (torch.nn.Module): The model for feature extraction.
+        device (torch.device): The device (e.g., 'cuda' or 'cpu') to use for computation.
+        df (pd.DataFrame, optional): Existing DataFrame to which features will be added. Defaults to None.
+
+    Returns:
+        pd.DataFrame: DataFrame with extracted features added.
+    """
+    # Ensure the model is in evaluation mode
+    model.eval()
+    metric_logger = misc.MetricLogger(delimiter="  ")
+    header = 'Feature extraction:'
+
+    feature_list = []
+
+    # Iterate over the data loader with logging
+    for batch in metric_logger.log_every(data_loader, 10, header):
+        images = batch[0]  # Assuming the batch contains images as the first element
+        images = images.to(device, non_blocking=True)
+
+        # Compute features using mixed precision if available
+        # with torch.amp.autocast(device_type='cuda'):
+        feature, _ = model(images, return_feature=True)
+        feature_list.append(feature.detach().cpu().numpy())
+
+    # Combine all extracted features into a single array
+    features = np.concatenate(feature_list, axis=0)
+
+    # Reshape features into a flat list (if necessary, based on feature dimensions)
+    features = features.reshape(-1, features.shape[-1])
+
+    # Create a DataFrame for features
+    feature_df = pd.DataFrame(features, columns=[f"pred_{idx}" for idx in range(features.shape[1])])
+
+    # If an existing DataFrame is provided, concatenate features; otherwise, return feature_df
+    if df is not None:
+        df = pd.concat([df, feature_df], axis=1)
+    else:
+        df = feature_df
+
+    return df

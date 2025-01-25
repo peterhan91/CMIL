@@ -39,9 +39,11 @@ class fmcib_enc(nn.Module):
         self.cnn = enc
         self.head = nn.Linear(latent_dim, num_classes)
 
-    def forward(self, x):
+    def forward(self, x, return_feature=False):
         # assume x has a shape of [N, C, D, H, W] = [N, 1, 240, 480, 480]
         z = self.cnn(x)
+        if return_feature:
+            return z, z
         z = self.head(z)
         return z
 
@@ -92,9 +94,11 @@ class Merlin_enc(nn.Module):
         self.cnn = enc
         self.head = nn.Linear(512, num_classes)
 
-    def forward(self, x):
+    def forward(self, x, return_feature=False):
         # assume x has a shape of [N, C, D, H, W] = [N, 1, 240, 480, 480]
         z = self.cnn(x)
+        if return_feature:
+            return z[0], z[1]
         z = self.head(z[0])
         return z
 
@@ -107,12 +111,16 @@ class CT_CLIP_enc(nn.Module):
         self.relu = nn.ReLU()
         self.head = nn.Linear(512, num_classes)
     
-    def forward(self, x):
+    def forward(self, x, return_feature=False):
         # assume x has a shape of [N, C, D, H, W] = [N, 1, 240, 480, 480]
         z = self.vit(x, return_encoded_tokens=True)
         z = torch.mean(z, dim=1)
         z = z.view(z.shape[0], -1)
         z = self.to_visual_latent(z)
+
+        if return_feature:
+            return z, z
+
         z = self.relu(z)
         z = self.head(z)
         return z

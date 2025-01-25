@@ -13,6 +13,7 @@ import argparse
 import datetime
 import json
 import numpy as np
+import pandas as pd
 import os
 import time
 from pathlib import Path
@@ -36,7 +37,7 @@ from util.datasets import build_dataset
 from other_models.model_zoo import fmcib_enc
 from other_models.fmcib.fmcib import fmcib_model
 
-from engine_finetune import train_one_epoch, evaluate_bce
+from engine_finetune import train_one_epoch, evaluate_bce, extract_features
 
 class DataLoaderX(DataLoader):
     def __iter__(self):
@@ -122,6 +123,8 @@ def get_args_parser():
     parser.add_argument('--seed', default=0, type=int)
     parser.add_argument('--resume', default='',
                         help='resume from checkpoint')
+    parser.add_argument('--feature_extration', action='store_true',
+                        help='feature extraction mode')
 
     parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
                         help='start epoch')
@@ -224,9 +227,9 @@ def main(args):
     
     
     ##################### Define the model #####################
-    if args.finetune and not args.eval:
+    if args.finetune:
         enc = fmcib_model(eval_mode=False, ckpt_path=None,
-                          widen_factor=1, pretrained=False,
+                          widen_factor=1, pretrained=True,
                           bias_downsample=False, conv1_t_stride=2,)
 
         model = fmcib_enc(num_classes=args.nb_classes, enc=enc, latent_dim=2048)
@@ -277,10 +280,17 @@ def main(args):
     misc.load_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
 
     if args.eval:
-        test_stats = evaluate_bce(data_loader_val, model, device, save_npy=True)
+        test_stats = evaluate_bce(data_loader_val, model, device, save_npy=args.output_dir)
         print(f"ROC-AUC of the network on the {len(dataset_val)} test images: {test_stats['roc_auc']:.3f}%")
         exit(0)
 
+    if args.feature_extration:
+        df_input = pd.read_csv(args.csv_path_val)
+        df = extract_features(data_loader_val, model, device, df=df_input)
+        save_path = os.path.join(args.output_dir, os.path.basename(args.csv_path_val).replace('.csv', '_features.csv'))
+        df.to_csv(save_path, index=False)
+        print(f"Features extraction completed!")
+        exit(0)
 
     ##################### Start training #####################
     print(f"Start training for {args.epochs} epochs")
